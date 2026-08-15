@@ -99,11 +99,11 @@ pnpm add -D @types/better-sqlite3 vitest @vitest/coverage-v8 jsdom @vitejs/plugi
 ```typescript
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
-import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 export default defineConfig({
   plugins: [react()],
-  resolve: { alias: { "@": path.resolve(__dirname, "./src") } },
+  resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   test: {
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
