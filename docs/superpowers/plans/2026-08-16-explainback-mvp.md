@@ -153,7 +153,7 @@ git commit -m "chore(工程): 初始化 Next.js 与测试环境"
 - 创建：`src/server/training/engine.ts`
 - 创建：`tests/unit/training-engine.test.ts`
 
-- [ ] **步骤 1：编写失败的状态机测试**
+- [x] **步骤 1：编写失败的状态机测试**
 
 ```typescript
 import { describe, expect, it } from "vitest";
@@ -217,13 +217,13 @@ describe("transitionAfterAssessment", () => {
 });
 ```
 
-- [ ] **步骤 2：运行测试并确认失败**
+- [x] **步骤 2：运行测试并确认失败**
 
 运行：`npx vitest run tests/unit/training-engine.test.ts`
 
 预期：FAIL，提示找不到 `@/server/training/engine`。
 
-- [ ] **步骤 3：实现最小领域模型和状态机**
+- [x] **步骤 3：实现最小领域模型和状态机**
 
 `src/lib/domain.ts` 定义：
 
@@ -252,7 +252,7 @@ export function getAttemptKind(stage: TrainingStage): AttemptKind;
 
 实现规则与规格第 8 节完全一致，`unclear` 返回原状态和阶段。
 
-- [ ] **步骤 4：补充输入校验并运行测试**
+- [x] **步骤 4：补充输入校验并运行测试**
 
 `src/lib/validation.ts` 导出：
 
@@ -273,7 +273,7 @@ export const submitAttemptInputSchema = z.object({
 
 预期：PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add src/lib src/server/training tests/unit/training-engine.test.ts
