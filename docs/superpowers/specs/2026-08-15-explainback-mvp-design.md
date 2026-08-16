@@ -1,4 +1,4 @@
-+# ExplainBack MVP 设计规格
+# ExplainBack MVP 设计规格
 
 ## 1. 产品目标
 
@@ -41,7 +41,7 @@ MVP 只验证以下假设：
 
 ### 3.1 技术栈
 
-- 包管理：pnpm。
+- 包管理：npm。
 - Web 框架：当前稳定版 Next.js App Router、React 和 TypeScript。
 - 样式：Tailwind CSS；核心视觉组件自建，不引入完整组件库。
 - API：Next.js Route Handlers，运行在 Node.js Runtime。
@@ -412,7 +412,7 @@ learning / initial_explanation
 8. 验证移动端主要页面。
 9. 验证 AI 错误和重试。
 
-最终必须通过 `pnpm lint`、`pnpm test`、`pnpm build` 和 Playwright 核心流程。
+最终必须通过 `npm run lint`、`npm test`、`npm run build` 和 Playwright 核心流程。
 
 ## 13. 验收标准
 

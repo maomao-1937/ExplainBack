@@ -1,4 +1,4 @@
-+# ExplainBack MVP 核心功能实现计划
+# ExplainBack MVP 核心功能实现计划
 
 > **面向 AI 代理的工作者：** 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实现此计划。步骤使用复选框（`- [ ]`）语法来跟踪进度。
 
@@ -6,7 +6,7 @@
 
 **架构：** 使用 Next.js App Router 作为 Web 与 BFF，Node.js Route Handlers 调用 AI Gateway 和 SQLite Repository。AI 只返回经过 Zod 校验的结构化结果；纯函数状态机决定训练阶段和 Concept 状态。
 
-**技术栈：** pnpm、Next.js、React、TypeScript、Tailwind CSS、better-sqlite3、Vercel AI SDK、Zod、Vitest、Testing Library、Playwright。
+**技术栈：** npm、Next.js、React、TypeScript、Tailwind CSS、better-sqlite3、Vercel AI SDK、Zod、Vitest、Testing Library、Playwright。
 
 ---
 
@@ -71,28 +71,28 @@
 - 创建：`.env.example`
 - 修改：`.gitignore`
 
-- [ ] **步骤 1：初始化项目**
+- [x] **步骤 1：初始化项目**
 
 运行：
 
 ```bash
 EXPLAINBACK_SCAFFOLD_DIR="$(mktemp -d)"
-pnpm create next-app@latest "$EXPLAINBACK_SCAFFOLD_DIR/explainback" --ts --tailwind --eslint --app --src-dir --import-alias "@/*" --use-pnpm --yes
+npm exec --yes create-next-app@latest -- "$EXPLAINBACK_SCAFFOLD_DIR/explainback" --ts --tailwind --eslint --app --src-dir --import-alias "@/*" --use-npm --yes
 rsync -a --exclude '.git' --exclude '.gitignore' "$EXPLAINBACK_SCAFFOLD_DIR/explainback/" ./
 ```
 
 预期：生成 App Router 项目，现有 `docs/` 和 `.gitignore` 被保留或合并。
 
-- [ ] **步骤 2：安装核心依赖**
+- [x] **步骤 2：安装核心依赖**
 
 运行：
 
 ```bash
-pnpm add ai @ai-sdk/openai-compatible zod better-sqlite3
-pnpm add -D @types/better-sqlite3 vitest @vitest/coverage-v8 jsdom @vitejs/plugin-react @testing-library/react @testing-library/jest-dom @testing-library/user-event @playwright/test
+npm install ai @ai-sdk/openai-compatible zod better-sqlite3
+npm install -D @types/better-sqlite3 vitest @vitest/coverage-v8 jsdom @vitejs/plugin-react @testing-library/react @testing-library/jest-dom @testing-library/user-event @playwright/test
 ```
 
-- [ ] **步骤 3：写入测试配置**
+- [x] **步骤 3：写入测试配置**
 
 `vitest.config.mts`：
 
@@ -119,7 +119,7 @@ export default defineConfig({
 import "@testing-library/jest-dom/vitest";
 ```
 
-- [ ] **步骤 4：配置脚本并验证基线**
+- [x] **步骤 4：配置脚本并验证基线**
 
 `package.json` 增加：
 
@@ -129,16 +129,16 @@ import "@testing-library/jest-dom/vitest";
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "next typegen && tsc --noEmit"
   }
 }
 ```
 
-运行：`pnpm lint && pnpm typecheck && pnpm build`
+运行：`npm run lint && npm run typecheck && npm run build`
 
 预期：全部退出码为 0。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add .
@@ -219,7 +219,7 @@ describe("transitionAfterAssessment", () => {
 
 - [ ] **步骤 2：运行测试并确认失败**
 
-运行：`pnpm vitest run tests/unit/training-engine.test.ts`
+运行：`npx vitest run tests/unit/training-engine.test.ts`
 
 预期：FAIL，提示找不到 `@/server/training/engine`。
 
@@ -269,7 +269,7 @@ export const submitAttemptInputSchema = z.object({
 });
 ```
 
-运行：`pnpm vitest run tests/unit/training-engine.test.ts`
+运行：`npx vitest run tests/unit/training-engine.test.ts`
 
 预期：PASS。
 
@@ -316,7 +316,7 @@ it("持久化 Session、Concept、Attempt 和 Knowledge Gap", () => {
 
 - [ ] **步骤 2：运行测试并确认失败**
 
-运行：`pnpm vitest run tests/integration/repositories.test.ts`
+运行：`npx vitest run tests/integration/repositories.test.ts`
 
 预期：FAIL，提示数据库模块不存在。
 
@@ -376,7 +376,7 @@ abandonConcept(conceptId)
 getTrainingView(conceptId)
 ```
 
-运行：`pnpm vitest run tests/integration/repositories.test.ts`
+运行：`npx vitest run tests/integration/repositories.test.ts`
 
 预期：PASS。
 
@@ -410,7 +410,7 @@ const singleQuestion = z.string().trim().min(2).max(240).refine(
 
 - [ ] **步骤 2：运行测试并确认失败**
 
-运行：`pnpm vitest run tests/unit/ai-schemas.test.ts tests/unit/mock-tutor.test.ts`
+运行：`npx vitest run tests/unit/ai-schemas.test.ts tests/unit/mock-tutor.test.ts`
 
 预期：FAIL，提示 AI 模块不存在。
 
@@ -463,7 +463,7 @@ Mock Tutor 精确覆盖：
 - 「RAG 就是搜索资料」→ `partial`
 - 「把知识重新训练进参数」→ `incorrect`
 
-运行：`pnpm vitest run tests/unit/ai-schemas.test.ts tests/unit/mock-tutor.test.ts`
+运行：`npx vitest run tests/unit/ai-schemas.test.ts tests/unit/mock-tutor.test.ts`
 
 预期：PASS。
 
@@ -496,7 +496,7 @@ git commit -m "feat(AI): 添加资料约束与结构化判断"
 
 - [ ] **步骤 2：运行测试并确认失败**
 
-运行：`pnpm vitest run tests/integration/session-service.test.ts tests/integration/training-service.test.ts`
+运行：`npx vitest run tests/integration/session-service.test.ts tests/integration/training-service.test.ts`
 
 预期：FAIL，提示 Service 不存在。
 
@@ -535,7 +535,7 @@ export function abandonTraining(conceptId: string, deps = defaultDeps);
 const initialQuestion = `先别看资料。请用你自己的话解释：${concept.title}。`;
 ```
 
-运行：`pnpm vitest run tests/integration/session-service.test.ts tests/integration/training-service.test.ts`
+运行：`npx vitest run tests/integration/session-service.test.ts tests/integration/training-service.test.ts`
 
 预期：PASS。
 
@@ -565,7 +565,7 @@ git commit -m "feat(服务): 打通学习地图与训练事务"
 
 - [ ] **步骤 2：运行测试并确认失败**
 
-运行：`pnpm vitest run tests/integration/routes.test.ts`
+运行：`npx vitest run tests/integration/routes.test.ts`
 
 预期：FAIL。
 
@@ -599,7 +599,7 @@ export function toErrorResponse(error: unknown): Response;
 - 使用 `toErrorResponse`。
 - 不返回 SQL、文件路径、API Key 或 Provider 原始响应。
 
-运行：`pnpm vitest run tests/integration/routes.test.ts`
+运行：`npx vitest run tests/integration/routes.test.ts`
 
 预期：PASS。
 
@@ -632,7 +632,7 @@ expect(screen.getByTestId("water-canvas")).toHaveStyle({ pointerEvents: "none" }
 
 - [ ] **步骤 2：运行测试并确认失败**
 
-运行：`pnpm vitest run tests/components/water-background.test.tsx`
+运行：`npx vitest run tests/components/water-background.test.tsx`
 
 预期：FAIL。
 
@@ -664,7 +664,7 @@ expect(screen.getByTestId("water-canvas")).toHaveStyle({ pointerEvents: "none" }
 }
 ```
 
-运行：`pnpm vitest run tests/components/water-background.test.tsx && pnpm build`
+运行：`npx vitest run tests/components/water-background.test.tsx && npm run build`
 
 预期：PASS。
 
@@ -691,7 +691,7 @@ Session Form 测试验证字段级错误、Loading、API Error 和成功跳转�
 
 - [ ] **步骤 2：运行测试并确认失败**
 
-运行：`pnpm vitest run tests/components/session-form.test.tsx tests/components/learning-map.test.tsx`
+运行：`npx vitest run tests/components/session-form.test.tsx tests/components/learning-map.test.tsx`
 
 预期：FAIL。
 
@@ -719,7 +719,7 @@ Server Component 直接调用 Repository。页面处理：
 - Empty：提示资料未生成知识点。
 - Missing：调用 `notFound()`。
 
-运行：`pnpm vitest run tests/components/session-form.test.tsx tests/components/learning-map.test.tsx && pnpm build`
+运行：`npx vitest run tests/components/session-form.test.tsx tests/components/learning-map.test.tsx && npm run build`
 
 预期：PASS。
 
@@ -751,7 +751,7 @@ git commit -m "feat(学习地图): 添加 Session 创建与知识点导航"
 
 - [ ] **步骤 2：运行测试并确认失败**
 
-运行：`pnpm vitest run tests/components/training-panel.test.tsx`
+运行：`npx vitest run tests/components/training-panel.test.tsx`
 
 预期：FAIL。
 
@@ -775,7 +775,7 @@ const clientRequestId = crypto.randomUUID();
 - Open 和 Resolved Gaps。
 - Concept 状态和阶段。
 
-运行：`pnpm vitest run tests/components/training-panel.test.tsx && pnpm build`
+运行：`npx vitest run tests/components/training-panel.test.tsx && npm run build`
 
 预期：PASS。
 
@@ -811,7 +811,7 @@ expect(events.map(event => event.eventName)).toEqual(expect.arrayContaining([
 
 - [ ] **步骤 2：运行测试并确认失败**
 
-运行：`pnpm vitest run tests/integration/analytics.test.ts`
+运行：`npx vitest run tests/integration/analytics.test.ts`
 
 预期：FAIL。
 
@@ -829,7 +829,7 @@ expect(events.map(event => event.eventName)).toEqual(expect.arrayContaining([
 - Explain 输入区背景动效降低。
 - 所有状态不只依赖颜色区分。
 
-运行：`pnpm lint && pnpm typecheck && pnpm test && pnpm build`
+运行：`npm run lint && npm run typecheck && npm test && npm run build`
 
 预期：全部 PASS。
 
@@ -883,8 +883,8 @@ test("完成从资料到 Mastered 的学习闭环", async ({ page }) => {
 运行：
 
 ```bash
-pnpm exec playwright install chromium
-pnpm test:e2e
+npx playwright install chromium
+npm run test:e2e
 ```
 
 预期：核心流程和错误恢复测试 PASS。
@@ -894,7 +894,7 @@ pnpm test:e2e
 README 包含：
 
 - 产品定位和核心流程。
-- Node.js 与 pnpm 要求。
+- Node.js 与 npm 要求。
 - 安装、环境变量、数据库位置和准确命令。
 - Mock 模式与真实 Provider 模式。
 - SQLite 部署边界。
@@ -903,11 +903,11 @@ README 包含：
 运行：
 
 ```bash
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm test:e2e
+npm run lint
+npm run typecheck
+npm test
+npm run build
+npm run test:e2e
 ```
 
 预期：全部退出码为 0。

@@ -11,5 +11,5 @@ data/*.db
 data/*.db-*
 .superpowers/
 *.log
+*.tsbuildinfo
 .DS_Store
-
