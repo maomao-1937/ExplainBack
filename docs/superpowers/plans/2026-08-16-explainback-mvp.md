@@ -685,17 +685,17 @@ git commit -m "feat(视觉): 实现日光水纹首页"
 - 创建：`tests/components/session-form.test.tsx`
 - 创建：`tests/components/learning-map.test.tsx`
 
-- [ ] **步骤 1：编写失败的组件测试**
+- [x] **步骤 1：编写失败的组件测试**
 
 Session Form 测试验证字段级错误、Loading、API Error 和成功跳转。Learning Map 测试验证四种状态中文标签和 Concept 链接。
 
-- [ ] **步骤 2：运行测试并确认失败**
+- [x] **步骤 2：运行测试并确认失败**
 
 运行：`npx vitest run tests/components/session-form.test.tsx tests/components/learning-map.test.tsx`
 
 预期：FAIL。
 
-- [ ] **步骤 3：实现 Session Form**
+- [x] **步骤 3：实现 Session Form**
 
 表单使用受控状态和原生 `fetch`：
 
@@ -709,7 +709,7 @@ const response = await fetch("/api/sessions", {
 
 请求期间禁用按钮；失败保留输入；成功执行 `router.push(`/sessions/${session.id}`)`。
 
-- [ ] **步骤 4：实现 Learning Map**
+- [x] **步骤 4：实现 Learning Map**
 
 Server Component 直接调用 Repository。页面处理：
 
@@ -723,7 +723,7 @@ Server Component 直接调用 Repository。页面处理：
 
 预期：PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add src/app/sessions src/components tests/components
