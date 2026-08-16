@@ -1,4 +1,5 @@
 import type { AiTutor, AssessmentResult, SupportResult } from "@/server/ai/tutor";
+import { getKnowledgeMode } from "@/lib/knowledge-mode";
 import {
   assessmentSchema,
   conceptExtractionSchema,
@@ -80,6 +81,16 @@ export function createMockTutor(): AiTutor {
   return {
     async extractConcepts(input) {
       simulateConfiguredFailure("extract");
+      if (getKnowledgeMode(input.sourceText) === "topic_general") {
+        return [
+          {
+            title: input.title,
+            description: `理解 ${input.title} 的核心概念、关系和适用边界。`,
+            sourceContext: `以主流通用知识解释 ${input.title}，无法确定时应明确保留不确定性。`,
+          },
+        ];
+      }
+
       const raw = conceptExtractionSchema.parse({
         concepts: collectExcerpts(input.sourceText).map((excerpt, index) => ({
           title: titleFromExcerpt(excerpt, index),

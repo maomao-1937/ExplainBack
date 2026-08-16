@@ -15,6 +15,20 @@ const baseAssessmentInput = {
 };
 
 describe("mock tutor", () => {
+  it("空资料时根据主题生成带判断基准的知识点", async () => {
+    const result = await createMockTutor().extractConcepts({
+      title: "RAG 入门",
+      sourceText: "",
+    });
+
+    expect(result.length).toBeGreaterThan(0);
+    expect(result[0]).toMatchObject({
+      title: expect.stringContaining("RAG"),
+      sourceContext: expect.any(String),
+    });
+    expect(result[0].sourceContext.length).toBeGreaterThan(0);
+  });
+
   it("提取的 sourceContext 都来自原资料", async () => {
     const result = await createMockTutor().extractConcepts({
       title: "RAG 入门",

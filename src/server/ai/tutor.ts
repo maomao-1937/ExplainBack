@@ -6,6 +6,7 @@ import type {
   SupportLevel,
   TrainingStage,
 } from "@/lib/domain";
+import { getKnowledgeMode } from "@/lib/knowledge-mode";
 import type { ConceptDraft } from "@/server/repositories/session-repository";
 import { createMockTutor } from "@/server/ai/mock-tutor";
 import {
@@ -14,12 +15,12 @@ import {
   supportSchema,
 } from "@/server/ai/schemas";
 import {
-  assessmentSystemPrompt,
   buildAssessmentPrompt,
   buildExtractionPrompt,
   buildSupportPrompt,
-  extractionSystemPrompt,
-  supportSystemPrompt,
+  getAssessmentSystemPrompt,
+  getExtractionSystemPrompt,
+  getSupportSystemPrompt,
 } from "@/server/ai/prompts";
 
 export interface ExtractConceptsInput {
@@ -114,7 +115,7 @@ export function createProviderTutor(): AiTutor {
         ...aiRequestOptions(),
         model,
         output: Output.object({ schema: conceptExtractionSchema }),
-        system: extractionSystemPrompt,
+        system: getExtractionSystemPrompt(getKnowledgeMode(input.sourceText)),
         prompt: buildExtractionPrompt(input),
       });
 
@@ -130,7 +131,7 @@ export function createProviderTutor(): AiTutor {
         ...aiRequestOptions(),
         model,
         output: Output.object({ schema: assessmentSchema }),
-        system: assessmentSystemPrompt,
+        system: getAssessmentSystemPrompt(getKnowledgeMode(input.sourceText)),
         prompt: buildAssessmentPrompt(input),
       });
 
@@ -148,7 +149,7 @@ export function createProviderTutor(): AiTutor {
         ...aiRequestOptions(),
         model,
         output: Output.object({ schema: supportSchema }),
-        system: supportSystemPrompt,
+        system: getSupportSystemPrompt(getKnowledgeMode(input.sourceText)),
         prompt: buildSupportPrompt(input),
       });
 
