@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 
 type FieldErrors = Partial<Record<"title" | "sourceText", string>>;
 
@@ -21,6 +21,11 @@ export function SessionForm() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const clientRequestId = useRef<string | null>(null);
+
+  const resetRequestId = () => {
+    clientRequestId.current = null;
+  };
 
   const validate = (): FieldErrors => {
     const errors: FieldErrors = {};
@@ -43,11 +48,16 @@ export function SessionForm() {
     if (Object.keys(errors).length > 0) return;
 
     setSubmitting(true);
+    clientRequestId.current ??= crypto.randomUUID();
     try {
       const response = await fetch("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: title.trim(), sourceText: sourceText.trim() }),
+        body: JSON.stringify({
+          clientRequestId: clientRequestId.current,
+          title: title.trim(),
+          sourceText: sourceText.trim(),
+        }),
       });
       const payload = (await response.json()) as ErrorPayload & {
         data?: { id: string };
@@ -91,7 +101,10 @@ export function SessionForm() {
           id="session-title"
           name="title"
           value={title}
-          onChange={(event) => setTitle(event.target.value)}
+          onChange={(event) => {
+            resetRequestId();
+            setTitle(event.target.value);
+          }}
           placeholder="例如：RAG 为什么能补充模型知识"
           aria-invalid={Boolean(fieldErrors.title)}
           aria-describedby={fieldErrors.title ? "title-error" : undefined}
@@ -113,7 +126,10 @@ export function SessionForm() {
           id="source-text"
           name="sourceText"
           value={sourceText}
-          onChange={(event) => setSourceText(event.target.value)}
+          onChange={(event) => {
+            resetRequestId();
+            setSourceText(event.target.value);
+          }}
           placeholder="粘贴正文或 Markdown。ExplainBack 只会依据这里的内容判断你的解释。"
           aria-invalid={Boolean(fieldErrors.sourceText)}
           aria-describedby={fieldErrors.sourceText ? "source-error" : "source-help"}
@@ -145,4 +161,3 @@ export function SessionForm() {
     </form>
   );
 }
-

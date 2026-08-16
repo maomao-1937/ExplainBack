@@ -20,6 +20,7 @@ export default async function SessionPage({
 
   const sessionView: LearningMapSession = {
     id: session.id,
+    clientRequestId: session.clientRequestId,
     title: session.title,
     mapStatus: session.mapStatus,
     mapError: session.mapError,
@@ -39,4 +40,3 @@ export default async function SessionPage({
     </main>
   );
 }
-

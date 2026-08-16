@@ -1,4 +1,5 @@
 import { mkdtempSync, rmSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -74,6 +75,7 @@ describe("core route handlers", () => {
 
     const response = await createSessionRoute(
       jsonRequest("http://localhost/api/sessions", {
+        clientRequestId: randomUUID(),
         title: "RAG 入门",
         sourceText,
       }),
@@ -96,6 +98,7 @@ describe("core route handlers", () => {
 
     const response = await createSessionRoute(
       jsonRequest("http://localhost/api/sessions", {
+        clientRequestId: randomUUID(),
         title: "RAG 入门",
         sourceText,
       }),
@@ -110,6 +113,7 @@ describe("core route handlers", () => {
   it("成功创建时返回最新 Session View", async () => {
     const response = await createSessionRoute(
       jsonRequest("http://localhost/api/sessions", {
+        clientRequestId: randomUUID(),
         title: "RAG 入门",
         sourceText,
       }),

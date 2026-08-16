@@ -101,6 +101,25 @@ export const MIGRATIONS: readonly Migration[] = [
         ON analytics_events(session_id, created_at);
     `,
   },
+  {
+    version: 2,
+    name: "add_idempotency_and_concept_versions",
+    sql: `
+      ALTER TABLE study_sessions ADD COLUMN client_request_id TEXT;
+      CREATE UNIQUE INDEX study_sessions_client_request_unique_idx
+        ON study_sessions(client_request_id)
+        WHERE client_request_id IS NOT NULL;
+
+      ALTER TABLE concepts
+        ADD COLUMN state_version INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE concepts
+        ADD COLUMN is_retraining INTEGER NOT NULL DEFAULT 0
+        CHECK (is_retraining IN (0, 1));
+
+      ALTER TABLE practice_attempts
+        ADD COLUMN concept_version INTEGER NOT NULL DEFAULT 0;
+    `,
+  },
 ] as const;
 
 export function runMigrations(db: Database.Database): void {
@@ -135,4 +154,3 @@ export function runMigrations(db: Database.Database): void {
 
   applyPending();
 }
-

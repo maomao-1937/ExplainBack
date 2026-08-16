@@ -140,6 +140,70 @@ describe("TrainingPanel", () => {
     expect(screen.getByLabelText("你的解释")).toHaveValue(answer);
     expect(screen.getByRole("button", { name: "重试这次判断" })).toBeEnabled();
   });
+
+  it("刷新后从失败 Attempt 恢复原回答和重试入口", () => {
+    renderPanel(
+      baseTraining({
+        attempts: [
+          completedAttempt({
+            id: "attempt-failed",
+            clientRequestId: "6165f24e-34d6-4e90-a4f7-89d30a3103a1",
+            processingStatus: "failed",
+            assessment: null,
+            errorMessage: "AI 判断失败，请重试",
+          }),
+        ],
+      }),
+    );
+
+    expect(screen.getByLabelText("你的解释")).toHaveValue("RAG 就是搜索资料。");
+    expect(screen.getByRole("alert")).toHaveTextContent("AI 判断失败，请重试");
+    expect(screen.getByRole("button", { name: "重试这次判断" })).toBeEnabled();
+  });
+
+  it("训练已推进后不再恢复过期的失败回答", () => {
+    renderPanel(
+      baseTraining({
+        concept: { stateVersion: 2 },
+        attempts: [
+          completedAttempt({
+            id: "attempt-failed",
+            conceptVersion: 1,
+            processingStatus: "failed",
+            assessment: null,
+            errorMessage: "AI 判断失败，请重试",
+          }),
+          completedAttempt({ id: "attempt-new", conceptVersion: 1 }),
+        ],
+      }),
+    );
+
+    expect(screen.getByLabelText("你的解释")).toHaveValue("");
+    expect(
+      screen.queryByRole("button", { name: "重试这次判断" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("已掌握结果页可以重新训练当前知识点", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json({ data: baseTraining() }),
+    );
+    renderPanel(
+      baseTraining({
+        concept: {
+          status: "mastered",
+          trainingStage: "complete",
+          currentQuestion: null,
+        },
+      }),
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "重新训练本知识点" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "为什么需要 RAG？" }),
+    ).toBeInTheDocument();
+  });
 });
 
 function renderPanel(training: TrainingPanelTraining) {
@@ -173,6 +237,8 @@ function baseTraining(
       supportLevel: 0,
       currentQuestion: "为什么需要 RAG？",
       currentSupportContent: null,
+      stateVersion: 1,
+      isRetraining: false,
       sortOrder: 0,
       startedAt: now,
       completedAt: null,
@@ -194,6 +260,7 @@ function completedAttempt(
     id: "attempt-1",
     conceptId: "concept-1",
     clientRequestId: "request-1",
+    conceptVersion: 1,
     kind: "explanation",
     question: "为什么需要 RAG？",
     userAnswer: "RAG 就是搜索资料。",

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { EmptyState, LoadingState } from "@/components/ui-states";
 import type { SessionWithConcepts } from "@/server/repositories/session-repository";
@@ -20,6 +20,12 @@ export function LearningMap({ session }: { session: LearningMapSession }) {
   const router = useRouter();
   const [retrying, setRetrying] = useState(false);
   const [retryError, setRetryError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (session.mapStatus !== "processing") return;
+    const timer = window.setTimeout(() => router.refresh(), 1_500);
+    return () => window.clearTimeout(timer);
+  }, [router, session.mapStatus, session.updatedAt]);
 
   const retry = async () => {
     setRetrying(true);
@@ -126,4 +132,3 @@ export function LearningMap({ session }: { session: LearningMapSession }) {
     </div>
   );
 }
-

@@ -13,6 +13,7 @@ import { createAnalyticsRepository } from "@/server/repositories/analytics-repos
 import { createSessionRepository } from "@/server/repositories/session-repository";
 import { createTrainingRepository } from "@/server/repositories/training-repository";
 import {
+  abandonTraining,
   requestSupport,
   startTraining,
   submitAttempt,
@@ -159,6 +160,38 @@ describe("training service", () => {
     expect(training.getTrainingView(conceptId)?.attempts).toHaveLength(1);
   });
 
+  it("AI 返回前训练被暂停时拒绝用旧结果覆盖新状态", async () => {
+    const mock = createMockTutor();
+    let releaseTutor!: () => void;
+    let markTutorEntered!: () => void;
+    const tutorEntered = new Promise<void>((resolve) => {
+      markTutorEntered = resolve;
+    });
+    const tutorGate = new Promise<void>((resolve) => {
+      releaseTutor = resolve;
+    });
+    const assessAnswer = vi.fn<AiTutor["assessAnswer"]>(async (input) => {
+      markTutorEntered();
+      await tutorGate;
+      return mock.assessAnswer(input);
+    });
+    const deps = makeDeps(db, { ...mock, assessAnswer });
+
+    await startTraining(conceptId, deps);
+    const pending = submitAttempt(
+      conceptId,
+      { clientRequestId: randomUUID(), userAnswer: "RAG 就是搜索资料。" },
+      deps,
+    );
+    await tutorEntered;
+    abandonTraining(conceptId, deps);
+    releaseTutor();
+
+    await expect(pending).rejects.toMatchObject({ name: "ConflictError" });
+    expect(createTrainingRepository(db).getTrainingView(conceptId)?.concept)
+      .toMatchObject({ status: "needs_review", trainingStage: "complete" });
+  });
+
   it("Level 3 后强制 Retest，重测正确后掌握并解决 Gap", async () => {
     const mock = createMockTutor();
     const deps = makeDeps(db, mock);
@@ -199,6 +232,92 @@ describe("training service", () => {
     });
     expect(completed.training.openGaps).toHaveLength(0);
     expect(completed.training.resolvedGaps.length).toBeGreaterThan(0);
+  });
+
+  it("已掌握知识点可重新训练，发现明确误解后降为需复习", async () => {
+    const mock = createMockTutor();
+    const deps = makeDeps(db, mock);
+
+    await startTraining(conceptId, deps);
+    await submitAttempt(
+      conceptId,
+      {
+        clientRequestId: randomUUID(),
+        userAnswer: "先检索资料，再放进上下文用于生成回答。",
+      },
+      deps,
+    );
+    await submitAttempt(
+      conceptId,
+      {
+        clientRequestId: randomUUID(),
+        userAnswer: "先检索资料，再放进上下文用于生成回答。",
+      },
+      deps,
+    );
+    expect(createTrainingRepository(db).getTrainingView(conceptId)?.concept.status)
+      .toBe("mastered");
+
+    const restarted = await startTraining(conceptId, deps);
+    expect(restarted.concept).toMatchObject({
+      status: "learning",
+      trainingStage: "initial_explanation",
+    });
+    const downgraded = await submitAttempt(
+      conceptId,
+      {
+        clientRequestId: randomUUID(),
+        userAnswer: "RAG 会把资料重新训练进模型参数。",
+      },
+      deps,
+    );
+
+    expect(downgraded.training.concept).toMatchObject({
+      status: "needs_review",
+      trainingStage: "complete",
+    });
+  });
+
+  it("重训时 partial 但包含明确误解也立即降为需复习", async () => {
+    const mock = createMockTutor();
+    const deps = makeDeps(db, mock);
+
+    await startTraining(conceptId, deps);
+    for (let index = 0; index < 2; index += 1) {
+      await submitAttempt(
+        conceptId,
+        {
+          clientRequestId: randomUUID(),
+          userAnswer: "先检索资料，再放进上下文用于生成回答。",
+        },
+        deps,
+      );
+    }
+    await startTraining(conceptId, deps);
+
+    const partialWithMisconception: AiTutor = {
+      ...mock,
+      assessAnswer: async () => ({
+        assessment: "partial",
+        understoodPoints: ["知道需要检索资料"],
+        missingPoints: [],
+        misconceptions: ["误以为资料会写入模型参数"],
+        nextQuestion: "资料是在何时加入模型的？",
+      }),
+    };
+    const downgraded = await submitAttempt(
+      conceptId,
+      {
+        clientRequestId: randomUUID(),
+        userAnswer: "会先检索，但资料也会写进模型参数。",
+      },
+      makeDeps(db, partialWithMisconception),
+    );
+
+    expect(downgraded.training.concept).toMatchObject({
+      status: "needs_review",
+      trainingStage: "complete",
+    });
   });
 });
 

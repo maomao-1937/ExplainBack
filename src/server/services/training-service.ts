@@ -8,6 +8,7 @@ import { getDatabase } from "@/server/db/client";
 import { createAnalyticsRepository } from "@/server/repositories/analytics-repository";
 import { createSessionRepository } from "@/server/repositories/session-repository";
 import {
+  ConcurrentConceptUpdateError,
   createTrainingRepository,
   type PracticeAttempt,
 } from "@/server/repositories/training-repository";
@@ -81,10 +82,14 @@ export async function startTraining(
 ) {
   const { concept, session } = getContext(conceptId, deps);
 
-  if (concept.status === "not_started" || concept.status === "needs_review") {
+  if (
+    concept.status === "not_started" ||
+    concept.status === "needs_review" ||
+    concept.status === "mastered"
+  ) {
     const initialQuestion = `先别看资料。请用你自己的话解释：${concept.title}。`;
     deps.runInTransaction(() => {
-      deps.training.startConcept(conceptId, initialQuestion);
+      deps.training.startConcept(conceptId, initialQuestion, concept.stateVersion);
       deps.analytics.record({
         eventName: "concept_started",
         sessionId: session.id,
@@ -142,7 +147,15 @@ export async function submitAttempt(
   deps: TrainingServiceDeps = defaultDeps(),
 ) {
   const { concept, session } = getContext(conceptId, deps);
-  const resolved = resolveAttemptForSubmission(conceptId, input, deps);
+  let resolved;
+  try {
+    resolved = resolveAttemptForSubmission(conceptId, input, deps);
+  } catch (error) {
+    if (error instanceof ConcurrentConceptUpdateError) {
+      throw new ConflictError(error.message);
+    }
+    throw error;
+  }
 
   if (resolved && !resolved.shouldProcess) {
     return {
@@ -168,6 +181,7 @@ export async function submitAttempt(
         kind: getAttemptKind(concept.trainingStage),
         question: concept.currentQuestion!,
         userAnswer: input.userAnswer,
+        conceptVersion: concept.stateVersion,
       });
       deps.analytics.record({
         eventName:
@@ -209,32 +223,55 @@ export async function submitAttempt(
     );
   }
 
-  const transition = transitionAfterAssessment({
-    stage: concept.trainingStage,
-    status: concept.status,
-    supportLevel: concept.supportLevel,
-    assessment: assessment.assessment,
-    nextQuestion: assessment.nextQuestion,
-  });
-  const completedAttempt = deps.runInTransaction(() => {
-    const completed = deps.training.completeAttemptAndTransition({
-      attemptId: attempt.id,
-      assessment: assessment.assessment,
-      understoodPoints: assessment.understoodPoints,
-      missingPoints: assessment.missingPoints,
-      misconceptions: assessment.misconceptions,
-      nextQuestion: assessment.nextQuestion,
-      transition,
-    });
-    if (transition.status === "mastered") {
-      deps.analytics.record({
-        eventName: "concept_mastered",
-        sessionId: session.id,
-        conceptId,
+  const transition =
+    concept.isRetraining &&
+    assessment.misconceptions.length > 0
+      ? {
+          stage: "complete" as const,
+          status: "needs_review" as const,
+          supportLevel: concept.supportLevel,
+          mastered: false,
+          currentQuestion: null,
+        }
+      : transitionAfterAssessment({
+          stage: concept.trainingStage,
+          status: concept.status,
+          supportLevel: concept.supportLevel,
+          assessment: assessment.assessment,
+          nextQuestion: assessment.nextQuestion,
+        });
+  let completedAttempt;
+  try {
+    completedAttempt = deps.runInTransaction(() => {
+      const completed = deps.training.completeAttemptAndTransition({
+        attemptId: attempt.id,
+        expectedConceptVersion: attempt.conceptVersion,
+        assessment: assessment.assessment,
+        understoodPoints: assessment.understoodPoints,
+        missingPoints: assessment.missingPoints,
+        misconceptions: assessment.misconceptions,
+        nextQuestion: assessment.nextQuestion,
+        transition,
       });
+      if (transition.status === "mastered") {
+        deps.analytics.record({
+          eventName: "concept_mastered",
+          sessionId: session.id,
+          conceptId,
+        });
+      }
+      return completed;
+    });
+  } catch (error) {
+    if (error instanceof ConcurrentConceptUpdateError) {
+      deps.training.failAttempt(
+        attempt.id,
+        "训练状态已更新，这次回答未参与判断",
+      );
+      throw new ConflictError("训练状态已在其他页面更新，请刷新查看最新进度");
     }
-    return completed;
-  });
+    throw error;
+  }
 
   return {
     attempt: completedAttempt,
@@ -299,21 +336,29 @@ export async function requestSupport(
     requestedLevel,
     nextQuestion: support.nextQuestion,
   });
-  deps.runInTransaction(() => {
-    deps.training.saveSupportAndTransition({
-      conceptId,
-      level: support.level,
-      content: support.content,
-      nextQuestion: support.nextQuestion,
-      stage: transition.stage,
+  try {
+    deps.runInTransaction(() => {
+      deps.training.saveSupportAndTransition({
+        conceptId,
+        level: support.level,
+        content: support.content,
+        nextQuestion: support.nextQuestion,
+        stage: transition.stage,
+        expectedConceptVersion: concept.stateVersion,
+      });
+      deps.analytics.record({
+        eventName: "hint_requested",
+        sessionId: session.id,
+        conceptId,
+        properties: { level: support.level },
+      });
     });
-    deps.analytics.record({
-      eventName: "hint_requested",
-      sessionId: session.id,
-      conceptId,
-      properties: { level: support.level },
-    });
-  });
+  } catch (error) {
+    if (error instanceof ConcurrentConceptUpdateError) {
+      throw new ConflictError("训练状态已在其他页面更新，请刷新查看最新进度");
+    }
+    throw error;
+  }
 
   return getTrainingView(conceptId, deps);
 }
@@ -322,14 +367,24 @@ export function abandonTraining(
   conceptId: string,
   deps: TrainingServiceDeps = defaultDeps(),
 ) {
-  const { session } = getContext(conceptId, deps);
-  return deps.runInTransaction(() => {
-    const concept = deps.training.abandonConcept(conceptId);
-    deps.analytics.record({
-      eventName: "concept_abandoned",
-      sessionId: session.id,
-      conceptId,
+  const { concept: current, session } = getContext(conceptId, deps);
+  try {
+    return deps.runInTransaction(() => {
+      const concept = deps.training.abandonConcept(
+        conceptId,
+        current.stateVersion,
+      );
+      deps.analytics.record({
+        eventName: "concept_abandoned",
+        sessionId: session.id,
+        conceptId,
+      });
+      return concept;
     });
-    return concept;
-  });
+  } catch (error) {
+    if (error instanceof ConcurrentConceptUpdateError) {
+      throw new ConflictError("训练状态已在其他页面更新，请刷新查看最新进度");
+    }
+    throw error;
+  }
 }

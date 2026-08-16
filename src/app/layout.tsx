@@ -11,7 +11,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="zh-CN" className="h-full antialiased">
+    <html
+      lang="zh-CN"
+      className="h-full antialiased"
+      data-scroll-behavior="smooth"
+    >
       <body>
         <a className="skip-link" href="#main-content">
           跳到主要内容

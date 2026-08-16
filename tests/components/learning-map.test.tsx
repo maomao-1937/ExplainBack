@@ -45,6 +45,7 @@ function readySession(): LearningMapSession {
   ] as const;
   return {
     id: "session-1",
+    clientRequestId: "6a9b6f94-bfcf-45ea-8ca8-f215b8477c1f",
     title: "RAG 入门",
     mapStatus: "ready",
     mapError: null,
@@ -61,6 +62,8 @@ function readySession(): LearningMapSession {
       supportLevel: 0,
       currentQuestion: null,
       currentSupportContent: null,
+      stateVersion: 0,
+      isRetraining: false,
       sortOrder: index,
       startedAt: null,
       completedAt: null,

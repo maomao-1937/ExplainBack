@@ -81,10 +81,32 @@ describe("SessionForm", () => {
       expect(push).toHaveBeenCalledWith("/sessions/session-ready"),
     );
   });
+
+  it("网络不确定时重复提交沿用同一个创建请求编号", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json(
+        { error: { code: "INTERNAL_ERROR", message: "服务暂时不可用" } },
+        { status: 500 },
+      ),
+    );
+    render(<SessionForm />);
+    await fillValidForm();
+
+    await userEvent.click(screen.getByRole("button", { name: "生成学习地图" }));
+    await screen.findByRole("alert");
+    await userEvent.click(screen.getByRole("button", { name: "生成学习地图" }));
+
+    const bodies = fetchSpy.mock.calls.map(([, init]) =>
+      JSON.parse(String(init?.body)) as { clientRequestId?: string },
+    );
+    expect(bodies[0].clientRequestId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+    expect(bodies[1].clientRequestId).toBe(bodies[0].clientRequestId);
+  });
 });
 
 async function fillValidForm() {
   await userEvent.type(screen.getByLabelText("学习主题"), "RAG 入门");
   await userEvent.type(screen.getByLabelText("学习资料"), validSource);
 }
-

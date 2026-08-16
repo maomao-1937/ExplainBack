@@ -19,10 +19,18 @@ import {
 
 export type AttemptProcessingStatus = "pending" | "completed" | "failed";
 
+export class ConcurrentConceptUpdateError extends Error {
+  constructor(message = "训练状态已在其他请求中更新") {
+    super(message);
+    this.name = "ConcurrentConceptUpdateError";
+  }
+}
+
 export interface PracticeAttempt {
   id: string;
   conceptId: string;
   clientRequestId: string;
+  conceptVersion: number;
   kind: AttemptKind;
   question: string;
   userAnswer: string;
@@ -60,6 +68,7 @@ interface AttemptRow {
   id: string;
   concept_id: string;
   client_request_id: string;
+  concept_version: number;
   kind: AttemptKind;
   question: string;
   user_answer: string;
@@ -88,6 +97,7 @@ interface GapRow {
 
 interface CompleteAttemptInput {
   attemptId: string;
+  expectedConceptVersion: number;
   assessment: Assessment;
   understoodPoints: string[];
   missingPoints: string[];
@@ -114,6 +124,7 @@ function mapAttempt(row: AttemptRow): PracticeAttempt {
     id: row.id,
     conceptId: row.concept_id,
     clientRequestId: row.client_request_id,
+    conceptVersion: row.concept_version,
     kind: row.kind,
     question: row.question,
     userAnswer: row.user_answer,
@@ -154,8 +165,17 @@ export function createTrainingRepository(db: Database.Database) {
   const getConceptStatement = db.prepare("SELECT * FROM concepts WHERE id = ?");
 
   return {
-    startConcept(conceptId: string, initialQuestion: string): Concept {
+    startConcept(
+      conceptId: string,
+      initialQuestion: string,
+      expectedVersion?: number,
+    ): Concept {
+      const current = getConceptStatement.get(conceptId) as ConceptRow | undefined;
+      if (!current) {
+        throw new Error("Concept 不存在");
+      }
       const now = new Date().toISOString();
+      const version = expectedVersion ?? current.state_version;
       const result = db
         .prepare(
           `UPDATE concepts
@@ -164,15 +184,17 @@ export function createTrainingRepository(db: Database.Database) {
                support_level = 0,
                current_question = ?,
                current_support_content = NULL,
+               is_retraining = CASE WHEN status = 'mastered' THEN 1 ELSE 0 END,
+               state_version = state_version + 1,
                started_at = COALESCE(started_at, ?),
                completed_at = NULL,
                updated_at = ?
-           WHERE id = ?`,
+           WHERE id = ? AND state_version = ?`,
         )
-        .run(initialQuestion, now, now, conceptId);
+        .run(initialQuestion, now, now, conceptId, version);
 
       if (result.changes === 0) {
-        throw new Error("Concept 不存在");
+        throw new ConcurrentConceptUpdateError();
       }
 
       return mapConcept(getConceptStatement.get(conceptId) as ConceptRow);
@@ -184,20 +206,29 @@ export function createTrainingRepository(db: Database.Database) {
       kind: AttemptKind;
       question: string;
       userAnswer: string;
+      conceptVersion?: number;
     }): PracticeAttempt {
       const id = randomUUID();
       const now = new Date().toISOString();
+      const concept = getConceptStatement.get(input.conceptId) as
+        | ConceptRow
+        | undefined;
+      if (!concept) {
+        throw new Error("Concept 不存在");
+      }
+      const conceptVersion = input.conceptVersion ?? concept.state_version;
       db.prepare(
         `INSERT INTO practice_attempts (
-          id, concept_id, client_request_id, kind, question, user_answer,
+          id, concept_id, client_request_id, concept_version, kind, question, user_answer,
           processing_status, assessment, understood_points_json,
           missing_points_json, misconceptions_json, next_question,
           error_message, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, 'pending', NULL, '[]', '[]', '[]', NULL, NULL, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NULL, '[]', '[]', '[]', NULL, NULL, ?, ?)`,
       ).run(
         id,
         input.conceptId,
         input.clientRequestId,
+        conceptVersion,
         input.kind,
         input.question,
         input.userAnswer,
@@ -223,6 +254,18 @@ export function createTrainingRepository(db: Database.Database) {
     },
 
     retryPendingAttempt(attemptId: string): PracticeAttempt {
+      const attempt = getAttemptStatement.get(attemptId) as AttemptRow | undefined;
+      if (!attempt) {
+        throw new Error("Attempt 不存在");
+      }
+      const concept = getConceptStatement.get(attempt.concept_id) as
+        | ConceptRow
+        | undefined;
+      if (!concept || concept.state_version !== attempt.concept_version) {
+        throw new ConcurrentConceptUpdateError(
+          "训练进度已经变化，这次旧回答不能继续重试",
+        );
+      }
       const result = db
         .prepare(
           `UPDATE practice_attempts
@@ -244,9 +287,43 @@ export function createTrainingRepository(db: Database.Database) {
         if (!attempt) {
           throw new Error("Attempt 不存在");
         }
+        if (attempt.concept_version !== input.expectedConceptVersion) {
+          throw new ConcurrentConceptUpdateError();
+        }
 
         const now = new Date().toISOString();
-        db.prepare(
+        const conceptUpdate = db
+          .prepare(
+            `UPDATE concepts
+             SET status = ?,
+                 training_stage = ?,
+                 support_level = ?,
+                 current_question = ?,
+                 current_support_content = NULL,
+                 state_version = state_version + 1,
+                 is_retraining = CASE WHEN ? = 'complete' THEN 0 ELSE is_retraining END,
+                 completed_at = CASE WHEN ? = 'complete' THEN ? ELSE NULL END,
+                 updated_at = ?
+             WHERE id = ? AND state_version = ?`,
+          )
+          .run(
+            input.transition.status,
+            input.transition.stage,
+            input.transition.supportLevel,
+            input.transition.currentQuestion,
+            input.transition.stage,
+            input.transition.stage,
+            now,
+            now,
+            attempt.concept_id,
+            input.expectedConceptVersion,
+          );
+
+        if (conceptUpdate.changes === 0) {
+          throw new ConcurrentConceptUpdateError();
+        }
+
+        const attemptUpdate = db.prepare(
           `UPDATE practice_attempts
            SET processing_status = 'completed',
                assessment = ?,
@@ -256,7 +333,7 @@ export function createTrainingRepository(db: Database.Database) {
                next_question = ?,
                error_message = NULL,
                updated_at = ?
-           WHERE id = ?`,
+           WHERE id = ? AND processing_status = 'pending'`,
         ).run(
           input.assessment,
           JSON.stringify(input.understoodPoints),
@@ -266,32 +343,8 @@ export function createTrainingRepository(db: Database.Database) {
           now,
           input.attemptId,
         );
-
-        const conceptUpdate = db
-          .prepare(
-            `UPDATE concepts
-             SET status = ?,
-                 training_stage = ?,
-                 support_level = ?,
-                 current_question = ?,
-                 current_support_content = NULL,
-                 completed_at = CASE WHEN ? = 'complete' THEN ? ELSE NULL END,
-                 updated_at = ?
-             WHERE id = ?`,
-          )
-          .run(
-            input.transition.status,
-            input.transition.stage,
-            input.transition.supportLevel,
-            input.transition.currentQuestion,
-            input.transition.stage,
-            now,
-            now,
-            attempt.concept_id,
-          );
-
-        if (conceptUpdate.changes === 0) {
-          throw new Error("Concept 不存在");
+        if (attemptUpdate.changes === 0) {
+          throw new ConcurrentConceptUpdateError("这次回答已经被其他请求处理");
         }
 
         const insertGap = db.prepare(
@@ -342,7 +395,7 @@ export function createTrainingRepository(db: Database.Database) {
         .prepare(
           `UPDATE practice_attempts
            SET processing_status = 'failed', error_message = ?, updated_at = ?
-           WHERE id = ?`,
+           WHERE id = ? AND processing_status = 'pending'`,
         )
         .run(message, new Date().toISOString(), attemptId);
       if (result.changes === 0) {
@@ -357,13 +410,22 @@ export function createTrainingRepository(db: Database.Database) {
       content: string;
       nextQuestion: string;
       stage: "support" | "retest";
+      expectedConceptVersion?: number;
     }): Concept {
+      const current = getConceptStatement.get(input.conceptId) as
+        | ConceptRow
+        | undefined;
+      if (!current) {
+        throw new Error("Concept 不存在");
+      }
+      const expectedVersion = input.expectedConceptVersion ?? current.state_version;
       const result = db
         .prepare(
           `UPDATE concepts
            SET training_stage = ?, support_level = ?, current_support_content = ?,
-               current_question = ?, updated_at = ?
-           WHERE id = ?`,
+               current_question = ?, state_version = state_version + 1,
+               updated_at = ?
+           WHERE id = ? AND state_version = ? AND status = 'learning'`,
         )
         .run(
           input.stage,
@@ -372,25 +434,33 @@ export function createTrainingRepository(db: Database.Database) {
           input.nextQuestion,
           new Date().toISOString(),
           input.conceptId,
+          expectedVersion,
         );
       if (result.changes === 0) {
-        throw new Error("Concept 不存在");
+        throw new ConcurrentConceptUpdateError();
       }
       return mapConcept(getConceptStatement.get(input.conceptId) as ConceptRow);
     },
 
-    abandonConcept(conceptId: string): Concept {
+    abandonConcept(conceptId: string, expectedVersion?: number): Concept {
+      const current = getConceptStatement.get(conceptId) as ConceptRow | undefined;
+      if (!current) {
+        throw new Error("Concept 不存在");
+      }
       const now = new Date().toISOString();
+      const version = expectedVersion ?? current.state_version;
       const result = db
         .prepare(
           `UPDATE concepts
            SET status = 'needs_review', training_stage = 'complete',
-               current_question = NULL, completed_at = ?, updated_at = ?
-           WHERE id = ? AND status != 'mastered'`,
+               current_question = NULL, is_retraining = 0,
+               state_version = state_version + 1,
+               completed_at = ?, updated_at = ?
+           WHERE id = ? AND status != 'mastered' AND state_version = ?`,
         )
-        .run(now, now, conceptId);
+        .run(now, now, conceptId, version);
       if (result.changes === 0) {
-        throw new Error("Concept 不存在或已掌握");
+        throw new ConcurrentConceptUpdateError();
       }
       return mapConcept(getConceptStatement.get(conceptId) as ConceptRow);
     },

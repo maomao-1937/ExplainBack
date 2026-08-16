@@ -172,6 +172,7 @@ describe("getAttemptKind", () => {
 describe("HTTP input schemas", () => {
   it("修剪创建 Session 的输入", () => {
     const parsed = createSessionInputSchema.parse({
+      clientRequestId: "6a9b6f94-bfcf-45ea-8ca8-f215b8477c1f",
       title: "  RAG 基础  ",
       sourceText: `  ${"RAG 会先检索资料，再把资料放入上下文辅助生成。".repeat(5)}  `,
     });

@@ -849,7 +849,7 @@ git commit -m "feat(体验): 完善错误状态与响应式交互"
 - 创建：`README.md`
 - 创建：`.env.example`
 
-- [ ] **步骤 1：编写核心 E2E 测试**
+- [x] **步骤 1：编写核心 E2E 测试**
 
 `core-flow.spec.ts` 使用 `AI_MOCK_MODE=true` 和独立测试数据库，完成：
 
@@ -874,11 +874,11 @@ test("完成从资料到 Mastered 的学习闭环", async ({ page }) => {
 
 继续请求 Level 1～3，完成 Retest，并断言「已掌握」和刷新后状态保留。
 
-- [ ] **步骤 2：编写错误恢复 E2E**
+- [x] **步骤 2：编写错误恢复 E2E**
 
 模拟一次 AI 失败，断言回答未丢失、重试按钮可用且没有重复 Attempt。
 
-- [ ] **步骤 3：运行 Playwright**
+- [x] **步骤 3：运行 Playwright**
 
 运行：
 
@@ -889,7 +889,7 @@ npm run test:e2e
 
 预期：核心流程和错误恢复测试 PASS。
 
-- [ ] **步骤 4：编写运行文档并最终验证**
+- [x] **步骤 4：编写运行文档并最终验证**
 
 README 包含：
 
@@ -912,7 +912,7 @@ npm run test:e2e
 
 预期：全部退出码为 0。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add .

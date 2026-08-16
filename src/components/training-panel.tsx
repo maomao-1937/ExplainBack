@@ -18,7 +18,7 @@ interface TrainingPanelProps {
 }
 
 interface ApiErrorPayload {
-  error?: { message?: string; resourceId?: string };
+  error?: { code?: string; message?: string; resourceId?: string };
 }
 
 interface FailedRequest {
@@ -42,16 +42,33 @@ export function TrainingPanel({
   nextConcept,
 }: TrainingPanelProps) {
   const router = useRouter();
+  const latestAttempt = initialTraining.attempts.at(-1);
+  const recoverableAttempt =
+    latestAttempt?.processingStatus === "failed" &&
+    latestAttempt.errorMessage === "AI 判断失败，请重试" &&
+    latestAttempt.conceptVersion === initialTraining.concept.stateVersion
+      ? latestAttempt
+      : undefined;
   const [training, setTraining] = useState(initialTraining);
-  const [answer, setAnswer] = useState("");
+  const [answer, setAnswer] = useState(recoverableAttempt?.userAnswer ?? "");
   const shouldStart = ["not_started", "needs_review"].includes(
     initialTraining.concept.status,
   );
   const [requesting, setRequesting] = useState<
     "start" | "submit" | "support" | "abandon" | null
   >(shouldStart ? "start" : null);
-  const [error, setError] = useState<string | null>(null);
-  const [failedRequest, setFailedRequest] = useState<FailedRequest | null>(null);
+  const [error, setError] = useState<string | null>(
+    recoverableAttempt?.errorMessage ?? null,
+  );
+  const [failedRequest, setFailedRequest] = useState<FailedRequest | null>(
+    recoverableAttempt
+      ? {
+          clientRequestId: recoverableAttempt.clientRequestId,
+          attemptId: recoverableAttempt.id,
+          answer: recoverableAttempt.userAnswer,
+        }
+      : null,
+  );
 
   useEffect(() => {
     if (!shouldStart) return;
@@ -131,6 +148,12 @@ export function TrainingPanel({
       };
 
       if (!response.ok) {
+        if (payload.error?.code === "CONFLICT") {
+          setFailedRequest(null);
+          setError(payload.error.message ?? "训练进度已更新，请刷新后继续");
+          window.location.reload();
+          return;
+        }
         setFailedRequest({
           ...activeRequest,
           attemptId: payload.error?.resourceId ?? activeRequest.attemptId,
@@ -211,12 +234,39 @@ export function TrainingPanel({
     }
   };
 
+  const restart = async () => {
+    setRequesting("start");
+    setError(null);
+    try {
+      const response = await fetch(`/api/concepts/${training.concept.id}/start`, {
+        method: "POST",
+      });
+      const payload = (await response.json()) as ApiErrorPayload & {
+        data?: TrainingPanelTraining;
+      };
+      if (!response.ok || !payload.data) {
+        setError(payload.error?.message ?? "重新训练启动失败，请稍后再试");
+        return;
+      }
+      setTraining(payload.data);
+      setAnswer("");
+      setFailedRequest(null);
+    } catch {
+      setError("网络连接失败，请稍后再试");
+    } finally {
+      setRequesting(null);
+    }
+  };
+
   if (training.concept.trainingStage === "complete") {
     return (
       <TrainingResult
         training={training}
         session={session}
         nextConcept={nextConcept}
+        onRestart={() => void restart()}
+        restarting={requesting === "start"}
+        error={error}
       />
     );
   }
@@ -392,10 +442,16 @@ function TrainingResult({
   training,
   session,
   nextConcept,
+  onRestart,
+  restarting,
+  error,
 }: {
   training: TrainingPanelTraining;
   session: { id: string; title: string };
   nextConcept: { id: string; title: string } | null;
+  onRestart: () => void;
+  restarting: boolean;
+  error: string | null;
 }) {
   const mastered = training.concept.status === "mastered";
   const understood = Array.from(
@@ -444,7 +500,22 @@ function TrainingResult({
             继续：{nextConcept.title} →
           </Link>
         ) : null}
+        {mastered ? (
+          <button
+            className="button button--ghost"
+            type="button"
+            onClick={onRestart}
+            disabled={restarting}
+          >
+            {restarting ? "正在重新开始…" : "重新训练本知识点"}
+          </button>
+        ) : null}
       </div>
+      {error ? (
+        <div className="form-alert" role="alert">
+          {error}
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -479,4 +550,3 @@ function supportButtonLabel(level: number) {
   if (level === 1) return "再具体一点 · Level 2";
   return "给我核心解释 · Level 3";
 }
-

@@ -12,6 +12,7 @@ export type MapStatus = "processing" | "ready" | "failed";
 
 export interface StudySession {
   id: string;
+  clientRequestId: string | null;
   title: string;
   sourceText: string;
   mapStatus: MapStatus;
@@ -31,6 +32,8 @@ export interface Concept {
   supportLevel: SupportLevel;
   currentQuestion: string | null;
   currentSupportContent: string | null;
+  stateVersion: number;
+  isRetraining: boolean;
   sortOrder: number;
   startedAt: string | null;
   completedAt: string | null;
@@ -55,6 +58,7 @@ export interface RecentSession extends StudySession {
 
 interface SessionRow {
   id: string;
+  client_request_id: string | null;
   title: string;
   source_text: string;
   map_status: MapStatus;
@@ -74,6 +78,8 @@ export interface ConceptRow {
   support_level: SupportLevel;
   current_question: string | null;
   current_support_content: string | null;
+  state_version: number;
+  is_retraining: 0 | 1;
   sort_order: number;
   started_at: string | null;
   completed_at: string | null;
@@ -84,6 +90,7 @@ export interface ConceptRow {
 function mapSession(row: SessionRow): StudySession {
   return {
     id: row.id,
+    clientRequestId: row.client_request_id,
     title: row.title,
     sourceText: row.source_text,
     mapStatus: row.map_status,
@@ -105,6 +112,8 @@ export function mapConcept(row: ConceptRow): Concept {
     supportLevel: row.support_level,
     currentQuestion: row.current_question,
     currentSupportContent: row.current_support_content,
+    stateVersion: row.state_version,
+    isRetraining: row.is_retraining === 1,
     sortOrder: row.sort_order,
     startedAt: row.started_at,
     completedAt: row.completed_at,
@@ -121,18 +130,28 @@ export function createSessionRepository(db: Database.Database) {
 
   return {
     createProcessing(input: {
+      clientRequestId?: string;
       title: string;
       sourceText: string;
     }): StudySession {
       const id = randomUUID();
+      const clientRequestId = input.clientRequestId ?? randomUUID();
       const now = new Date().toISOString();
       db.prepare(
         `INSERT INTO study_sessions (
-          id, title, source_text, map_status, map_error, created_at, updated_at
-        ) VALUES (?, ?, ?, 'processing', NULL, ?, ?)`,
-      ).run(id, input.title, input.sourceText, now, now);
+          id, client_request_id, title, source_text, map_status, map_error,
+          created_at, updated_at
+        ) VALUES (?, ?, ?, ?, 'processing', NULL, ?, ?)`,
+      ).run(id, clientRequestId, input.title, input.sourceText, now, now);
 
       return mapSession(getSessionStatement.get(id) as SessionRow);
+    },
+
+    getByClientRequestId(clientRequestId: string): StudySession | null {
+      const row = db
+        .prepare("SELECT * FROM study_sessions WHERE client_request_id = ?")
+        .get(clientRequestId) as SessionRow | undefined;
+      return row ? mapSession(row) : null;
     },
 
     markMapFailed(sessionId: string, message: string): void {

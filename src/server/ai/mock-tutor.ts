@@ -54,9 +54,25 @@ function parseSupport(result: {
   };
 }
 
-function simulateConfiguredFailure(operation: "extract" | "assess" | "support") {
+const scriptedFailureCounts = new Map<string, number>();
+
+function simulateConfiguredFailure(
+  operation: "extract" | "assess" | "support",
+  inputKey = "",
+) {
   if (process.env.AI_MOCK_FAILURE === operation) {
     throw new Error("mock provider exploded");
+  }
+  if (
+    process.env.AI_MOCK_FAILURE === "scripted-assess-twice" &&
+    operation === "assess" &&
+    inputKey.includes("【模拟服务端失败】")
+  ) {
+    const count = scriptedFailureCounts.get(inputKey) ?? 0;
+    if (count < 2) {
+      scriptedFailureCounts.set(inputKey, count + 1);
+      throw new Error("mock provider exploded");
+    }
   }
 }
 
@@ -80,7 +96,7 @@ export function createMockTutor(): AiTutor {
     },
 
     async assessAnswer(input) {
-      simulateConfiguredFailure("assess");
+      simulateConfiguredFailure("assess", input.userAnswer);
       const answer = input.userAnswer.toLocaleLowerCase("zh-CN");
       const hasMisconception =
         /(重新?训练|训练.*参数|参数.*训练|写进.*参数)/.test(answer);

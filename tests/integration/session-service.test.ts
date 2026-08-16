@@ -1,6 +1,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { randomUUID } from "node:crypto";
 
 import type Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -46,7 +47,7 @@ describe("session service", () => {
     });
 
     const result = await createStudySession(
-      { title: "RAG 入门", sourceText },
+      { title: "RAG 入门", sourceText, clientRequestId: randomUUID() },
       makeDeps(db, { extractConcepts }),
     );
 
@@ -74,7 +75,7 @@ describe("session service", () => {
       ]);
 
     const result = await createStudySession(
-      { title: "RAG 入门", sourceText },
+      { title: "RAG 入门", sourceText, clientRequestId: randomUUID() },
       makeDeps(db, { extractConcepts }),
     );
 
@@ -90,7 +91,7 @@ describe("session service", () => {
 
     await expect(
       createStudySession(
-        { title: "RAG 入门", sourceText },
+        { title: "RAG 入门", sourceText, clientRequestId: randomUUID() },
         makeDeps(db, { extractConcepts: failingExtract }),
       ),
     ).rejects.toMatchObject({ name: "TutorOperationError" });
@@ -115,6 +116,45 @@ describe("session service", () => {
     );
 
     expect(recovered).toMatchObject({ id: failed.id, mapStatus: "ready" });
+  });
+
+  it("重复创建请求复用同一个 Session 且不重复调用 AI", async () => {
+    const clientRequestId = randomUUID();
+    const extractConcepts = vi.fn<AiTutor["extractConcepts"]>(async () => [
+      {
+        title: "检索增强生成",
+        description: "理解检索资料如何参与生成",
+        sourceContext: "再把检索结果放入模型上下文",
+      },
+    ]);
+    const deps = makeDeps(db, { extractConcepts });
+    const input = { title: "RAG 入门", sourceText, clientRequestId };
+
+    const first = await createStudySession(input, deps);
+    const duplicate = await createStudySession(input, deps);
+
+    expect(duplicate.id).toBe(first.id);
+    expect(extractConcepts).toHaveBeenCalledOnce();
+    expect(createSessionRepository(db).listRecent(10)).toHaveLength(1);
+  });
+
+  it("只允许失败的 Session 重新生成学习地图", async () => {
+    const ready = await createStudySession(
+      { title: "RAG 入门", sourceText, clientRequestId: randomUUID() },
+      makeDeps(db, {
+        extractConcepts: vi.fn(async () => [
+          {
+            title: "检索增强生成",
+            description: "理解检索资料如何参与生成",
+            sourceContext: "再把检索结果放入模型上下文",
+          },
+        ]),
+      }),
+    );
+
+    await expect(
+      retryLearningMap(ready.id, makeDeps(db, {})),
+    ).rejects.toMatchObject({ name: "InvalidStateError" });
   });
 });
 

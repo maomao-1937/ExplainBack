@@ -48,7 +48,7 @@ describe("analytics events", () => {
       runInTransaction: transactionRunner(db),
     };
     const session = await createStudySession(
-      { title: "RAG 入门", sourceText },
+      { title: "RAG 入门", sourceText, clientRequestId: randomUUID() },
       shared,
     );
     const conceptId = session.concepts[0].id;
@@ -109,7 +109,7 @@ describe("analytics events", () => {
 
     await expect(
       createStudySession(
-        { title: "RAG 入门", sourceText },
+        { title: "RAG 入门", sourceText, clientRequestId: randomUUID() },
         {
           sessions,
           tutor: createMockTutor(),

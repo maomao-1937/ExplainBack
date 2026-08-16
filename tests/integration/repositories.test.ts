@@ -142,6 +142,7 @@ describe("SQLite repositories", () => {
 
     training.completeAttemptAndTransition({
       attemptId: firstAttempt.id,
+      expectedConceptVersion: firstAttempt.conceptVersion,
       assessment: "partial",
       understoodPoints: ["知道需要检索"],
       missingPoints: ["没有解释检索资料如何参与生成"],
@@ -165,6 +166,7 @@ describe("SQLite repositories", () => {
 
     training.completeAttemptAndTransition({
       attemptId: secondAttempt.id,
+      expectedConceptVersion: secondAttempt.conceptVersion,
       assessment: "incorrect",
       understoodPoints: [],
       missingPoints: ["  没有解释检索资料如何参与生成  "],

@@ -67,6 +67,24 @@ export class AiConfigurationError extends Error {
   }
 }
 
+export const DEFAULT_AI_TIMEOUT_MS = 30_000;
+
+export function getAiTimeoutMs(raw = process.env.AI_TIMEOUT_MS): number {
+  if (!raw) return DEFAULT_AI_TIMEOUT_MS;
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < 1_000 || parsed > 120_000) {
+    return DEFAULT_AI_TIMEOUT_MS;
+  }
+  return parsed;
+}
+
+function aiRequestOptions() {
+  return {
+    timeout: getAiTimeoutMs(),
+    maxRetries: 0,
+  } as const;
+}
+
 function requireAiConfig() {
   const apiKey = process.env.AI_API_KEY;
   const baseURL = process.env.AI_BASE_URL;
@@ -93,6 +111,7 @@ export function createProviderTutor(): AiTutor {
   return {
     async extractConcepts(input) {
       const { output } = await generateText({
+        ...aiRequestOptions(),
         model,
         output: Output.object({ schema: conceptExtractionSchema }),
         system: extractionSystemPrompt,
@@ -108,6 +127,7 @@ export function createProviderTutor(): AiTutor {
 
     async assessAnswer(input) {
       const { output } = await generateText({
+        ...aiRequestOptions(),
         model,
         output: Output.object({ schema: assessmentSchema }),
         system: assessmentSystemPrompt,
@@ -125,6 +145,7 @@ export function createProviderTutor(): AiTutor {
 
     async generateSupport(input) {
       const { output } = await generateText({
+        ...aiRequestOptions(),
         model,
         output: Output.object({ schema: supportSchema }),
         system: supportSystemPrompt,

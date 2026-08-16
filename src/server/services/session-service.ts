@@ -14,6 +14,8 @@ import {
 } from "@/server/repositories/session-repository";
 import {
   AiConfigurationServiceError,
+  ConflictError,
+  InvalidStateError,
   NotFoundError,
   TutorOperationError,
 } from "@/server/services/errors";
@@ -28,6 +30,8 @@ export interface SessionServiceDeps {
   tutor: AiTutor;
   runInTransaction: TransactionRunner;
 }
+
+type StudyMaterialInput = Pick<CreateSessionInput, "title" | "sourceText">;
 
 function defaultDeps(): SessionServiceDeps {
   const db = getDatabase();
@@ -51,7 +55,7 @@ function getRequiredSession(
 }
 
 async function extractGroundedConcepts(
-  input: CreateSessionInput,
+  input: StudyMaterialInput,
   tutor: AiTutor,
 ): Promise<ConceptDraft[]> {
   let lastError: unknown;
@@ -78,7 +82,7 @@ async function extractGroundedConcepts(
 
 async function generateLearningMap(
   sessionId: string,
-  input: CreateSessionInput,
+  input: StudyMaterialInput,
   deps: SessionServiceDeps,
 ): Promise<SessionWithConcepts> {
   try {
@@ -103,6 +107,14 @@ export async function createStudySession(
   input: CreateSessionInput,
   deps: SessionServiceDeps = defaultDeps(),
 ): Promise<SessionWithConcepts> {
+  const existing = deps.sessions.getByClientRequestId(input.clientRequestId);
+  if (existing) {
+    if (existing.title !== input.title || existing.sourceText !== input.sourceText) {
+      throw new ConflictError("这个创建请求已用于另一份学习资料");
+    }
+    return getRequiredSession(existing.id, deps.sessions);
+  }
+
   const session = deps.runInTransaction(() => {
     const created = deps.sessions.createProcessing(input);
     deps.analytics.record({
@@ -120,6 +132,9 @@ export async function retryLearningMap(
   deps: SessionServiceDeps = defaultDeps(),
 ): Promise<SessionWithConcepts> {
   const session = getRequiredSession(sessionId, deps.sessions);
+  if (session.mapStatus !== "failed") {
+    throw new InvalidStateError("只有生成失败的学习地图可以重试");
+  }
   deps.sessions.markMapProcessing(sessionId);
 
   return generateLearningMap(
