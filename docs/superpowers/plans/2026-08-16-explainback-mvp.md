@@ -289,7 +289,7 @@ git commit -m "feat(训练): 添加确定性学习状态机"
 - 创建：`src/server/repositories/training-repository.ts`
 - 创建：`tests/integration/repositories.test.ts`
 
-- [ ] **步骤 1：编写失败的 Repository 测试**
+- [x] **步骤 1：编写失败的 Repository 测试**
 
 测试使用 `mkdtempSync(join(tmpdir(), "explainback-"))` 创建临时数据库，验证：
 
@@ -314,13 +314,13 @@ it("持久化 Session、Concept、Attempt 和 Knowledge Gap", () => {
 });
 ```
 
-- [ ] **步骤 2：运行测试并确认失败**
+- [x] **步骤 2：运行测试并确认失败**
 
 运行：`npx vitest run tests/integration/repositories.test.ts`
 
 预期：FAIL，提示数据库模块不存在。
 
-- [ ] **步骤 3：实现数据库迁移**
+- [x] **步骤 3：实现数据库迁移**
 
 `migrations.ts` 导出按版本排序的 `MIGRATIONS`，创建：
 
@@ -350,7 +350,7 @@ export function getDatabase(): Database.Database {
 }
 ```
 
-- [ ] **步骤 4：实现 Repository 和事务**
+- [x] **步骤 4：实现 Repository 和事务**
 
 Session Repository 必须提供：
 
@@ -380,7 +380,7 @@ getTrainingView(conceptId)
 
 预期：PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add src/server/db src/server/repositories tests/integration/repositories.test.ts
