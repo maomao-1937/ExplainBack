@@ -54,9 +54,16 @@ function parseSupport(result: {
   };
 }
 
+function simulateConfiguredFailure(operation: "extract" | "assess" | "support") {
+  if (process.env.AI_MOCK_FAILURE === operation) {
+    throw new Error("mock provider exploded");
+  }
+}
+
 export function createMockTutor(): AiTutor {
   return {
     async extractConcepts(input) {
+      simulateConfiguredFailure("extract");
       const raw = conceptExtractionSchema.parse({
         concepts: collectExcerpts(input.sourceText).map((excerpt, index) => ({
           title: titleFromExcerpt(excerpt, index),
@@ -73,6 +80,7 @@ export function createMockTutor(): AiTutor {
     },
 
     async assessAnswer(input) {
+      simulateConfiguredFailure("assess");
       const answer = input.userAnswer.toLocaleLowerCase("zh-CN");
       const hasMisconception =
         /(重新?训练|训练.*参数|参数.*训练|写进.*参数)/.test(answer);
@@ -122,6 +130,7 @@ export function createMockTutor(): AiTutor {
     },
 
     async generateSupport(input) {
+      simulateConfiguredFailure("support");
       const supports: Record<1 | 2 | 3, Omit<SupportResult, "level">> = {
         1: {
           content: "想一想：模型原本不知道最新信息时，回答前可以先做什么？",
@@ -146,4 +155,3 @@ export function createMockTutor(): AiTutor {
     },
   };
 }
-

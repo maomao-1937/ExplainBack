@@ -2,6 +2,7 @@ export type ServiceErrorCode =
   | "NOT_FOUND"
   | "CONFLICT"
   | "INVALID_STATE"
+  | "AI_CONFIGURATION"
   | "AI_UNAVAILABLE";
 
 export class ServiceError extends Error {
@@ -44,3 +45,9 @@ export class TutorOperationError extends ServiceError {
   }
 }
 
+export class AiConfigurationServiceError extends ServiceError {
+  constructor(message: string, resourceId?: string, cause?: unknown) {
+    super("AI_CONFIGURATION", message, resourceId, { cause });
+    this.name = "AiConfigurationServiceError";
+  }
+}

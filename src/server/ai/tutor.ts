@@ -151,3 +151,10 @@ export function getAiTutor(): AiTutor {
   return createProviderTutor();
 }
 
+export function createLazyAiTutor(): AiTutor {
+  return {
+    extractConcepts: (input) => getAiTutor().extractConcepts(input),
+    assessAnswer: (input) => getAiTutor().assessAnswer(input),
+    generateSupport: (input) => getAiTutor().generateSupport(input),
+  };
+}

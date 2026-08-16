@@ -553,7 +553,7 @@ git commit -m "feat(服务): 打通学习地图与训练事务"
 - 创建：6 个 `route.ts`
 - 创建：`tests/integration/routes.test.ts`
 
-- [ ] **步骤 1：编写失败的路由测试**
+- [x] **步骤 1：编写失败的路由测试**
 
 直接调用 Route Handler 导出函数，验证：
 
@@ -563,13 +563,13 @@ git commit -m "feat(服务): 打通学习地图与训练事务"
 - Provider 错误返回 502。
 - 成功响应返回最新 View Model。
 
-- [ ] **步骤 2：运行测试并确认失败**
+- [x] **步骤 2：运行测试并确认失败**
 
 运行：`npx vitest run tests/integration/routes.test.ts`
 
 预期：FAIL。
 
-- [ ] **步骤 3：实现 HTTP 错误映射**
+- [x] **步骤 3：实现 HTTP 错误映射**
 
 `src/lib/http.ts`：
 
@@ -588,7 +588,7 @@ export class AppError extends Error {
 export function toErrorResponse(error: unknown): Response;
 ```
 
-- [ ] **步骤 4：实现全部 Route Handlers**
+- [x] **步骤 4：实现全部 Route Handlers**
 
 每个 Handler：
 
@@ -603,7 +603,7 @@ export function toErrorResponse(error: unknown): Response;
 
 预期：PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add src/app/api src/lib/http.ts tests/integration/routes.test.ts

@@ -1,5 +1,9 @@
 import type { SubmitAttemptInput } from "@/lib/validation";
-import { getAiTutor, type AiTutor } from "@/server/ai/tutor";
+import {
+  AiConfigurationError,
+  createLazyAiTutor,
+  type AiTutor,
+} from "@/server/ai/tutor";
 import { getDatabase } from "@/server/db/client";
 import { createAnalyticsRepository } from "@/server/repositories/analytics-repository";
 import { createSessionRepository } from "@/server/repositories/session-repository";
@@ -14,6 +18,7 @@ import {
 } from "@/server/training/engine";
 import {
   ConflictError,
+  AiConfigurationServiceError,
   InvalidStateError,
   NotFoundError,
   TutorOperationError,
@@ -32,7 +37,7 @@ function defaultDeps(): TrainingServiceDeps {
     sessions: createSessionRepository(db),
     training: createTrainingRepository(db),
     analytics: createAnalyticsRepository(db),
-    tutor: getAiTutor(),
+    tutor: createLazyAiTutor(),
   };
 }
 
@@ -182,6 +187,13 @@ export async function submitAttempt(
     );
   } catch (error) {
     deps.training.failAttempt(attempt.id, "AI 判断失败，请重试");
+    if (error instanceof AiConfigurationError) {
+      throw new AiConfigurationServiceError(
+        "AI 尚未配置，你的回答已保存",
+        attempt.id,
+        error,
+      );
+    }
     throw new TutorOperationError(
       "AI 暂时没有完成判断，你的回答已保存",
       attempt.id,
@@ -258,6 +270,13 @@ export async function requestSupport(
       }),
     );
   } catch (error) {
+    if (error instanceof AiConfigurationError) {
+      throw new AiConfigurationServiceError(
+        "AI 尚未配置，请完成配置后重试",
+        conceptId,
+        error,
+      );
+    }
     throw new TutorOperationError(
       "AI 暂时没有生成提示，请稍后重试",
       conceptId,

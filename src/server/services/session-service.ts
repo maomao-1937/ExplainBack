@@ -1,5 +1,9 @@
 import type { CreateSessionInput } from "@/lib/validation";
-import { getAiTutor, type AiTutor } from "@/server/ai/tutor";
+import {
+  AiConfigurationError,
+  createLazyAiTutor,
+  type AiTutor,
+} from "@/server/ai/tutor";
 import { sourceContainsContext } from "@/server/ai/schemas";
 import { getDatabase } from "@/server/db/client";
 import { createAnalyticsRepository } from "@/server/repositories/analytics-repository";
@@ -8,7 +12,11 @@ import {
   type ConceptDraft,
   type SessionWithConcepts,
 } from "@/server/repositories/session-repository";
-import { NotFoundError, TutorOperationError } from "@/server/services/errors";
+import {
+  AiConfigurationServiceError,
+  NotFoundError,
+  TutorOperationError,
+} from "@/server/services/errors";
 
 export interface SessionServiceDeps {
   sessions: ReturnType<typeof createSessionRepository>;
@@ -21,7 +29,7 @@ function defaultDeps(): SessionServiceDeps {
   return {
     sessions: createSessionRepository(db),
     analytics: createAnalyticsRepository(db),
-    tutor: getAiTutor(),
+    tutor: createLazyAiTutor(),
   };
 }
 
@@ -74,6 +82,13 @@ async function generateLearningMap(
   } catch (error) {
     const publicMessage = "知识地图生成失败，请稍后重试";
     deps.sessions.markMapFailed(sessionId, publicMessage);
+    if (error instanceof AiConfigurationError) {
+      throw new AiConfigurationServiceError(
+        "AI 尚未配置，你的学习资料已保存",
+        sessionId,
+        error,
+      );
+    }
     throw new TutorOperationError(publicMessage, sessionId, error);
   }
 }
@@ -104,4 +119,3 @@ export async function retryLearningMap(
     deps,
   );
 }
-
