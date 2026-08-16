@@ -795,7 +795,7 @@ git commit -m "feat(陪练): 完成解释追问与再验证闭环"
 - 修改：`src/app/globals.css`
 - 创建：`tests/integration/analytics.test.ts`
 
-- [ ] **步骤 1：编写失败的埋点测试**
+- [x] **步骤 1：编写失败的埋点测试**
 
 触发完整训练流程，断言事件名只包含白名单并且：
 
@@ -809,17 +809,17 @@ expect(events.map(event => event.eventName)).toEqual(expect.arrayContaining([
 ]));
 ```
 
-- [ ] **步骤 2：运行测试并确认失败**
+- [x] **步骤 2：运行测试并确认失败**
 
 运行：`npx vitest run tests/integration/analytics.test.ts`
 
 预期：FAIL。
 
-- [ ] **步骤 3：补齐事件写入和错误页面**
+- [x] **步骤 3：补齐事件写入和错误页面**
 
 所有事件与领域事务同一事务提交。错误页不暴露内部异常，提供「重试」和「返回学习地图」。
 
-- [ ] **步骤 4：完成响应式和键盘可用性**
+- [x] **步骤 4：完成响应式和键盘可用性**
 
 验证：
 
@@ -833,7 +833,7 @@ expect(events.map(event => event.eventName)).toEqual(expect.arrayContaining([
 
 预期：全部 PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add src tests/integration/analytics.test.ts

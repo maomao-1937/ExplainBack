@@ -29,6 +29,7 @@ html {
 body {
   min-height: 100%;
   margin: 0;
+  overflow-x: clip;
   background: #dcece8;
   color: var(--ink);
   font-family: var(--font-sans);
@@ -1355,6 +1356,24 @@ a {
   gap: 12px;
   padding: 18px;
   border-radius: 18px;
+}
+
+.error-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.error-page .state-card {
+  min-height: 480px;
+}
+
+.error-page h1 {
+  margin: 14px 0 8px;
+  font-size: clamp(34px, 6vw, 54px);
+  letter-spacing: -0.06em;
 }
 
 @keyframes water-depth-drift {

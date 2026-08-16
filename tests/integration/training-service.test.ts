@@ -220,5 +220,6 @@ function makeDeps(db: Database.Database, tutor: AiTutor) {
     training: createTrainingRepository(db),
     analytics: createAnalyticsRepository(db),
     tutor,
+    runInTransaction: <T,>(operation: () => T) => db.transaction(operation)(),
   };
 }

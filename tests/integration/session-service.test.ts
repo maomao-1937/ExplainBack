@@ -137,6 +137,6 @@ function makeDeps(
     sessions: createSessionRepository(db),
     analytics: createAnalyticsRepository(db),
     tutor,
+    runInTransaction: <T,>(operation: () => T) => db.transaction(operation)(),
   };
 }
-

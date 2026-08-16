@@ -17,11 +17,16 @@ import {
   NotFoundError,
   TutorOperationError,
 } from "@/server/services/errors";
+import {
+  createTransactionRunner,
+  type TransactionRunner,
+} from "@/server/services/transaction";
 
 export interface SessionServiceDeps {
   sessions: ReturnType<typeof createSessionRepository>;
   analytics: ReturnType<typeof createAnalyticsRepository>;
   tutor: AiTutor;
+  runInTransaction: TransactionRunner;
 }
 
 function defaultDeps(): SessionServiceDeps {
@@ -30,6 +35,7 @@ function defaultDeps(): SessionServiceDeps {
     sessions: createSessionRepository(db),
     analytics: createAnalyticsRepository(db),
     tutor: createLazyAiTutor(),
+    runInTransaction: createTransactionRunner(db),
   };
 }
 
@@ -97,10 +103,13 @@ export async function createStudySession(
   input: CreateSessionInput,
   deps: SessionServiceDeps = defaultDeps(),
 ): Promise<SessionWithConcepts> {
-  const session = deps.sessions.createProcessing(input);
-  deps.analytics.record({
-    eventName: "session_created",
-    sessionId: session.id,
+  const session = deps.runInTransaction(() => {
+    const created = deps.sessions.createProcessing(input);
+    deps.analytics.record({
+      eventName: "session_created",
+      sessionId: created.id,
+    });
+    return created;
   });
 
   return generateLearningMap(session.id, input, deps);

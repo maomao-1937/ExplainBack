@@ -17,18 +17,23 @@ import {
   transitionAfterSupport,
 } from "@/server/training/engine";
 import {
-  ConflictError,
   AiConfigurationServiceError,
+  ConflictError,
   InvalidStateError,
   NotFoundError,
   TutorOperationError,
 } from "@/server/services/errors";
+import {
+  createTransactionRunner,
+  type TransactionRunner,
+} from "@/server/services/transaction";
 
 export interface TrainingServiceDeps {
   sessions: ReturnType<typeof createSessionRepository>;
   training: ReturnType<typeof createTrainingRepository>;
   analytics: ReturnType<typeof createAnalyticsRepository>;
   tutor: AiTutor;
+  runInTransaction: TransactionRunner;
 }
 
 function defaultDeps(): TrainingServiceDeps {
@@ -38,6 +43,7 @@ function defaultDeps(): TrainingServiceDeps {
     training: createTrainingRepository(db),
     analytics: createAnalyticsRepository(db),
     tutor: createLazyAiTutor(),
+    runInTransaction: createTransactionRunner(db),
   };
 }
 
@@ -77,11 +83,13 @@ export async function startTraining(
 
   if (concept.status === "not_started" || concept.status === "needs_review") {
     const initialQuestion = `先别看资料。请用你自己的话解释：${concept.title}。`;
-    deps.training.startConcept(conceptId, initialQuestion);
-    deps.analytics.record({
-      eventName: "concept_started",
-      sessionId: session.id,
-      conceptId,
+    deps.runInTransaction(() => {
+      deps.training.startConcept(conceptId, initialQuestion);
+      deps.analytics.record({
+        eventName: "concept_started",
+        sessionId: session.id,
+        conceptId,
+      });
     });
   }
 
@@ -153,25 +161,25 @@ export async function submitAttempt(
 
   const attempt =
     resolved?.attempt ??
-    deps.training.createPendingAttempt({
-      conceptId,
-      clientRequestId: input.clientRequestId,
-      kind: getAttemptKind(concept.trainingStage),
-      question: concept.currentQuestion,
-      userAnswer: input.userAnswer,
+    deps.runInTransaction(() => {
+      const created = deps.training.createPendingAttempt({
+        conceptId,
+        clientRequestId: input.clientRequestId,
+        kind: getAttemptKind(concept.trainingStage),
+        question: concept.currentQuestion!,
+        userAnswer: input.userAnswer,
+      });
+      deps.analytics.record({
+        eventName:
+          created.kind === "explanation"
+            ? "explanation_submitted"
+            : "followup_answered",
+        sessionId: session.id,
+        conceptId,
+        properties: { attemptId: created.id, kind: created.kind },
+      });
+      return created;
     });
-
-  if (!resolved) {
-    deps.analytics.record({
-      eventName:
-        attempt.kind === "explanation"
-          ? "explanation_submitted"
-          : "followup_answered",
-      sessionId: session.id,
-      conceptId,
-      properties: { attemptId: attempt.id, kind: attempt.kind },
-    });
-  }
 
   let assessment;
   try {
@@ -208,23 +216,25 @@ export async function submitAttempt(
     assessment: assessment.assessment,
     nextQuestion: assessment.nextQuestion,
   });
-  const completedAttempt = deps.training.completeAttemptAndTransition({
-    attemptId: attempt.id,
-    assessment: assessment.assessment,
-    understoodPoints: assessment.understoodPoints,
-    missingPoints: assessment.missingPoints,
-    misconceptions: assessment.misconceptions,
-    nextQuestion: assessment.nextQuestion,
-    transition,
-  });
-
-  if (transition.status === "mastered") {
-    deps.analytics.record({
-      eventName: "concept_mastered",
-      sessionId: session.id,
-      conceptId,
+  const completedAttempt = deps.runInTransaction(() => {
+    const completed = deps.training.completeAttemptAndTransition({
+      attemptId: attempt.id,
+      assessment: assessment.assessment,
+      understoodPoints: assessment.understoodPoints,
+      missingPoints: assessment.missingPoints,
+      misconceptions: assessment.misconceptions,
+      nextQuestion: assessment.nextQuestion,
+      transition,
     });
-  }
+    if (transition.status === "mastered") {
+      deps.analytics.record({
+        eventName: "concept_mastered",
+        sessionId: session.id,
+        conceptId,
+      });
+    }
+    return completed;
+  });
 
   return {
     attempt: completedAttempt,
@@ -289,18 +299,20 @@ export async function requestSupport(
     requestedLevel,
     nextQuestion: support.nextQuestion,
   });
-  deps.training.saveSupportAndTransition({
-    conceptId,
-    level: support.level,
-    content: support.content,
-    nextQuestion: support.nextQuestion,
-    stage: transition.stage,
-  });
-  deps.analytics.record({
-    eventName: "hint_requested",
-    sessionId: session.id,
-    conceptId,
-    properties: { level: support.level },
+  deps.runInTransaction(() => {
+    deps.training.saveSupportAndTransition({
+      conceptId,
+      level: support.level,
+      content: support.content,
+      nextQuestion: support.nextQuestion,
+      stage: transition.stage,
+    });
+    deps.analytics.record({
+      eventName: "hint_requested",
+      sessionId: session.id,
+      conceptId,
+      properties: { level: support.level },
+    });
   });
 
   return getTrainingView(conceptId, deps);
@@ -311,11 +323,13 @@ export function abandonTraining(
   deps: TrainingServiceDeps = defaultDeps(),
 ) {
   const { session } = getContext(conceptId, deps);
-  const concept = deps.training.abandonConcept(conceptId);
-  deps.analytics.record({
-    eventName: "concept_abandoned",
-    sessionId: session.id,
-    conceptId,
+  return deps.runInTransaction(() => {
+    const concept = deps.training.abandonConcept(conceptId);
+    deps.analytics.record({
+      eventName: "concept_abandoned",
+      sessionId: session.id,
+      conceptId,
+    });
+    return concept;
   });
-  return concept;
 }
