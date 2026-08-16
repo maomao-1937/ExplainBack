@@ -128,6 +128,23 @@ describe("core route handlers", () => {
     });
     expect(body.data.concepts.length).toBeGreaterThan(0);
   });
+
+  it("只提供主题也能创建学习地图", async () => {
+    const response = await createSessionRoute(
+      jsonRequest("http://localhost/api/sessions", {
+        clientRequestId: randomUUID(),
+        title: "RAG 入门",
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(body.data).toMatchObject({
+      title: "RAG 入门",
+      sourceText: "",
+      mapStatus: "ready",
+    });
+  });
 });
 
 function jsonRequest(url: string, body: unknown): Request {

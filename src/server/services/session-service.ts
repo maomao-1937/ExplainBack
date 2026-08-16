@@ -1,4 +1,5 @@
 import type { CreateSessionInput } from "@/lib/validation";
+import { getKnowledgeMode } from "@/lib/knowledge-mode";
 import {
   AiConfigurationError,
   createLazyAiTutor,
@@ -59,19 +60,24 @@ async function extractGroundedConcepts(
   tutor: AiTutor,
 ): Promise<ConceptDraft[]> {
   let lastError: unknown;
+  const mode = getKnowledgeMode(input.sourceText);
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
       const concepts = await tutor.extractConcepts(input);
       if (
         concepts.length > 0 &&
-        concepts.every((concept) =>
-          sourceContainsContext(input.sourceText, concept.sourceContext),
-        )
+        (mode === "topic_general" ||
+          concepts.every((concept) =>
+            sourceContainsContext(input.sourceText, concept.sourceContext),
+          ))
       ) {
         return concepts;
       }
-      lastError = new Error("AI 返回了资料中不存在的引用片段");
+      lastError =
+        mode === "topic_general"
+          ? new Error("AI 未返回有效知识点")
+          : new Error("AI 返回了资料中不存在的引用片段");
     } catch (error) {
       lastError = error;
     }

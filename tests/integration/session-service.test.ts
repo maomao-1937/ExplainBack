@@ -56,6 +56,29 @@ describe("session service", () => {
     expect(extractConcepts).toHaveBeenCalledOnce();
   });
 
+  it("空资料时接受 AI 生成的通用知识判断基准", async () => {
+    const extractConcepts = vi.fn<AiTutor["extractConcepts"]>(async () => [
+      {
+        title: "RAG 的核心流程",
+        description: "理解检索与生成的关系",
+        sourceContext: "RAG 通常先检索信息，再将结果用于生成回答。",
+      },
+    ]);
+
+    const result = await createStudySession(
+      {
+        clientRequestId: randomUUID(),
+        title: "RAG 入门",
+        sourceText: "",
+      },
+      makeDeps(db, { extractConcepts }),
+    );
+
+    expect(result).toMatchObject({ mapStatus: "ready", sourceText: "" });
+    expect(result.concepts[0].sourceContext).toContain("RAG 通常");
+    expect(extractConcepts).toHaveBeenCalledOnce();
+  });
+
   it("资料片段不在原文时自动重试一次", async () => {
     const extractConcepts = vi
       .fn<AiTutor["extractConcepts"]>()
@@ -116,6 +139,47 @@ describe("session service", () => {
     );
 
     expect(recovered).toMatchObject({ id: failed.id, mapStatus: "ready" });
+  });
+
+  it("空资料生成失败后复用原 Session 恢复", async () => {
+    const sessions = createSessionRepository(db);
+    const failingExtract = vi
+      .fn<AiTutor["extractConcepts"]>()
+      .mockRejectedValue(new Error("provider down"));
+
+    await expect(
+      createStudySession(
+        {
+          title: "RAG 入门",
+          sourceText: "",
+          clientRequestId: randomUUID(),
+        },
+        makeDeps(db, { extractConcepts: failingExtract }),
+      ),
+    ).rejects.toMatchObject({ name: "TutorOperationError" });
+
+    const failed = sessions.listRecent(10)[0];
+    expect(failed).toMatchObject({ mapStatus: "failed" });
+    expect(sessions.getSessionWithConcepts(failed.id)?.sourceText).toBe("");
+
+    const recovered = await retryLearningMap(
+      failed.id,
+      makeDeps(db, {
+        extractConcepts: vi.fn(async () => [
+          {
+            title: "RAG 的核心流程",
+            description: "理解检索与生成的关系",
+            sourceContext: "RAG 通常先检索信息，再将结果用于生成回答。",
+          },
+        ]),
+      }),
+    );
+
+    expect(recovered).toMatchObject({
+      id: failed.id,
+      mapStatus: "ready",
+      sourceText: "",
+    });
   });
 
   it("重复创建请求复用同一个 Session 且不重复调用 AI", async () => {
