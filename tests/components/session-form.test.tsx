@@ -26,12 +26,44 @@ describe("SessionForm", () => {
     render(<SessionForm />);
 
     await userEvent.type(screen.getByLabelText("学习主题"), "A");
-    await userEvent.type(screen.getByLabelText("学习资料"), "太短");
+    await userEvent.type(screen.getByLabelText("学习资料（可选）"), "太短");
     await userEvent.click(screen.getByRole("button", { name: "生成学习地图" }));
 
     expect(screen.getByText("主题至少需要 2 个字符")).toBeInTheDocument();
-    expect(screen.getByText("学习资料至少需要 100 个字符")).toBeInTheDocument();
+    expect(
+      screen.getByText("学习资料请留空，或至少输入 100 个字符"),
+    ).toBeInTheDocument();
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("只填写主题即可提交空资料", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json({ data: { id: "topic-session" } }, { status: 201 }),
+    );
+    render(<SessionForm />);
+
+    await userEvent.type(screen.getByLabelText("学习主题"), "RAG 入门");
+    await userEvent.click(screen.getByRole("button", { name: "生成学习地图" }));
+
+    await waitFor(() =>
+      expect(push).toHaveBeenCalledWith("/sessions/topic-session"),
+    );
+    const body = JSON.parse(String(fetchSpy.mock.calls[0][1]?.body));
+    expect(body.sourceText).toBe("");
+  });
+
+  it("短资料提示留空或补足 100 字", async () => {
+    render(<SessionForm />);
+    await userEvent.type(screen.getByLabelText("学习主题"), "RAG 入门");
+    await userEvent.type(
+      screen.getByLabelText("学习资料（可选）"),
+      "只有几句话",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "生成学习地图" }));
+
+    expect(
+      screen.getByText("学习资料请留空，或至少输入 100 个字符"),
+    ).toBeInTheDocument();
   });
 
   it("请求期间禁用按钮并展示生成状态", async () => {
@@ -66,7 +98,7 @@ describe("SessionForm", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("服务暂时不可用");
     expect(screen.getByLabelText("学习主题")).toHaveValue("RAG 入门");
-    expect(screen.getByLabelText("学习资料")).toHaveValue(validSource);
+    expect(screen.getByLabelText("学习资料（可选）")).toHaveValue(validSource);
   });
 
   it("成功后跳转到同一个 Session 的学习地图", async () => {
@@ -108,5 +140,5 @@ describe("SessionForm", () => {
 
 async function fillValidForm() {
   await userEvent.type(screen.getByLabelText("学习主题"), "RAG 入门");
-  await userEvent.type(screen.getByLabelText("学习资料"), validSource);
+  await userEvent.type(screen.getByLabelText("学习资料（可选）"), validSource);
 }

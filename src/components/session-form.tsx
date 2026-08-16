@@ -33,8 +33,8 @@ export function SessionForm() {
     const cleanSource = sourceText.trim();
     if (cleanTitle.length < 2) errors.title = "主题至少需要 2 个字符";
     else if (cleanTitle.length > 80) errors.title = "主题不能超过 80 个字符";
-    if (cleanSource.length < 100)
-      errors.sourceText = "学习资料至少需要 100 个字符";
+    if (cleanSource.length > 0 && cleanSource.length < 100)
+      errors.sourceText = "学习资料请留空，或至少输入 100 个字符";
     else if (cleanSource.length > 60_000)
       errors.sourceText = "学习资料不能超过 60,000 个字符";
     return errors;
@@ -119,7 +119,7 @@ export function SessionForm() {
 
       <div className="form-field">
         <div className="form-label-row">
-          <label htmlFor="source-text">学习资料</label>
+          <label htmlFor="source-text">学习资料（可选）</label>
           <span>{sourceText.length.toLocaleString("zh-CN")} / 60,000</span>
         </div>
         <textarea
@@ -130,7 +130,7 @@ export function SessionForm() {
             resetRequestId();
             setSourceText(event.target.value);
           }}
-          placeholder="粘贴正文或 Markdown。ExplainBack 只会依据这里的内容判断你的解释。"
+          placeholder="可粘贴正文或 Markdown；留空则根据学习主题直接训练。"
           aria-invalid={Boolean(fieldErrors.sourceText)}
           aria-describedby={fieldErrors.sourceText ? "source-error" : "source-help"}
           disabled={submitting}
@@ -141,7 +141,7 @@ export function SessionForm() {
           </p>
         ) : (
           <p className="field-help" id="source-help">
-            至少 100 字；当前 MVP 支持纯文本和 Markdown。
+            留空：依据通用知识；填写：至少 100 字，并严格依据资料。
           </p>
         )}
       </div>
@@ -153,7 +153,7 @@ export function SessionForm() {
       ) : null}
 
       <div className="form-submit-row">
-        <p>提交后会先保存资料，再生成 1～10 个可训练知识点。</p>
+        <p>系统会根据主题或资料生成 1～10 个可训练知识点。</p>
         <button className="button button--primary" type="submit" disabled={submitting}>
           {submitting ? "正在拆解知识点…" : "生成学习地图"}
         </button>
