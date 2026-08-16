@@ -50,13 +50,13 @@ export function LearningMap({ session }: { session: LearningMapSession }) {
   };
 
   if (session.mapStatus === "processing") {
-    return <LoadingState label="正在从资料中拆解知识点…" />;
+    return <LoadingState label="正在生成学习地图…" />;
   }
 
   if (session.mapStatus === "failed") {
     return (
       <div className="state-card state-card--error" role="alert">
-        <span className="eyebrow">资料已安全保留</span>
+        <span className="eyebrow">学习内容已安全保留</span>
         <h2>学习地图还没有生成</h2>
         <p>{retryError ?? session.mapError ?? "AI 暂时没有完成处理"}</p>
         <button
@@ -75,8 +75,8 @@ export function LearningMap({ session }: { session: LearningMapSession }) {
     return (
       <EmptyState
         eyebrow="未识别到知识点"
-        title="换一份更完整的资料试试"
-        description="资料需要包含可解释的概念、关系或步骤。"
+        title="换个更明确的主题试试"
+        description="也可以补充包含概念、关系或步骤的学习资料。"
         actionLabel="创建新的 Session"
         actionHref="/sessions/new"
       />

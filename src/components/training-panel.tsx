@@ -303,7 +303,7 @@ export function TrainingPanel({
         <div className="current-question" data-testid="current-question">
           <span className="eyebrow">AI 的当前问题</span>
           <h2>{training.concept.currentQuestion}</h2>
-          <p>先别回看资料。把你的思路、因果关系和例子都讲出来。</p>
+          <p>先别查现成答案。把你的思路、因果关系和例子都讲出来。</p>
         </div>
 
         <div className="answer-field">

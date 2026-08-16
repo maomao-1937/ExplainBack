@@ -7,11 +7,10 @@ export default function NewSessionPage() {
         <span className="eyebrow">New learning session</span>
         <h1>今天想把什么讲明白？</h1>
         <p>
-          放入一份你刚读过的资料。我们先拆成学习地图，再从第一个知识点开始听你解释。
+          输入一个想讲明白的主题；如有资料，也可以一并粘贴。
         </p>
       </header>
       <SessionForm />
     </main>
   );
 }
-

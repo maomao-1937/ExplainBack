@@ -82,8 +82,8 @@ export default function Home() {
         <div className="method-grid">
           <article className="method-card method-card--sun">
             <span>01</span>
-            <h3>放入学习资料</h3>
-            <p>粘贴文本或 Markdown，AI 只基于你的资料拆出学习地图。</p>
+            <h3>学习资料可选</h3>
+            <p>输入主题即可直练；粘贴资料后，AI 会严格据此拆解。</p>
           </article>
           <article className="method-card method-card--water">
             <span>02</span>
@@ -114,8 +114,8 @@ export default function Home() {
         {sessions.length === 0 ? (
           <EmptyState
             eyebrow="还没有学习记录"
-            title="从一份你刚读完的资料开始"
-            description="准备 100 字以上的文本。你负责讲，ExplainBack 负责追问。"
+            title="从一个想讲明白的主题开始"
+            description="只需输入主题；也可粘贴 100 字以上的资料。"
             actionLabel="创建第一个 Session"
             actionHref="/sessions/new"
           />
