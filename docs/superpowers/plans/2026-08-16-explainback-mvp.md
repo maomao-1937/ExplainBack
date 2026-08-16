@@ -397,7 +397,7 @@ git commit -m "feat(数据): 添加 SQLite 持久化与事务仓储"
 - 创建：`tests/unit/ai-schemas.test.ts`
 - 创建：`tests/unit/mock-tutor.test.ts`
 
-- [ ] **步骤 1：编写失败的 AI Schema 测试**
+- [x] **步骤 1：编写失败的 AI Schema 测试**
 
 验证非法枚举、多问题字符串、`correct` 携带遗漏、错误 Level 和超过 120 字的 Level 3 内容会失败。单问题校验使用：
 
@@ -408,13 +408,13 @@ const singleQuestion = z.string().trim().min(2).max(240).refine(
 );
 ```
 
-- [ ] **步骤 2：运行测试并确认失败**
+- [x] **步骤 2：运行测试并确认失败**
 
 运行：`npx vitest run tests/unit/ai-schemas.test.ts tests/unit/mock-tutor.test.ts`
 
 预期：FAIL，提示 AI 模块不存在。
 
-- [ ] **步骤 3：实现 Schema 和资料片段校验**
+- [x] **步骤 3：实现 Schema 和资料片段校验**
 
 导出：
 
@@ -427,7 +427,7 @@ export function sourceContainsContext(sourceText: string, sourceContext: string)
 
 `assessmentSchema.superRefine` 要求 `assessment === "correct"` 时遗漏和误解数组为空。
 
-- [ ] **步骤 4：实现 AI Tutor**
+- [x] **步骤 4：实现 AI Tutor**
 
 `tutor.ts`：
 
@@ -467,7 +467,7 @@ Mock Tutor 精确覆盖：
 
 预期：PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add src/server/ai tests/unit
