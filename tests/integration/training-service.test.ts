@@ -198,6 +198,7 @@ describe("training service", () => {
       trainingStage: "complete",
     });
     expect(completed.training.openGaps).toHaveLength(0);
+    expect(completed.training.resolvedGaps.length).toBeGreaterThan(0);
   });
 });
 

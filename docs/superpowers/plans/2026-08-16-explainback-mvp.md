@@ -737,7 +737,7 @@ git commit -m "feat(学习地图): 添加 Session 创建与知识点导航"
 - 创建：`src/app/sessions/[sessionId]/concepts/[conceptId]/page.tsx`
 - 创建：`tests/components/training-panel.test.tsx`
 
-- [ ] **步骤 1：编写失败的训练组件测试**
+- [x] **步骤 1：编写失败的训练组件测试**
 
 测试覆盖：
 
@@ -749,13 +749,13 @@ git commit -m "feat(学习地图): 添加 Session 创建与知识点导航"
 - Mastered 显示已修复 Gap 和下一个知识点。
 - API 失败时用户回答仍保留在输入框或失败 Attempt 区。
 
-- [ ] **步骤 2：运行测试并确认失败**
+- [x] **步骤 2：运行测试并确认失败**
 
 运行：`npx vitest run tests/components/training-panel.test.tsx`
 
 预期：FAIL。
 
-- [ ] **步骤 3：实现 Training Panel**
+- [x] **步骤 3：实现 Training Panel**
 
 组件状态只保存正在输入和请求状态；训练真相来自 API 返回的 `TrainingView`。提交请求每次生成：
 
@@ -765,7 +765,7 @@ const clientRequestId = crypto.randomUUID();
 
 失败重试复用同一个 `clientRequestId` 和 `retryAttemptId`。
 
-- [ ] **步骤 4：实现结果和恢复**
+- [x] **步骤 4：实现结果和恢复**
 
 页面 Server Component 读取 `TrainingView`；Client Component 首次加载对 `not_started` Concept 调用 Start API。刷新后从 Repository 恢复：
 
@@ -779,7 +779,7 @@ const clientRequestId = crypto.randomUUID();
 
 预期：PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add src/components/training-panel.tsx src/app/sessions tests/components/training-panel.test.tsx

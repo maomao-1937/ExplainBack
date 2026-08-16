@@ -49,6 +49,13 @@ export interface KnowledgeGap {
   updatedAt: string;
 }
 
+export interface TrainingView {
+  concept: Concept;
+  attempts: PracticeAttempt[];
+  openGaps: KnowledgeGap[];
+  resolvedGaps: KnowledgeGap[];
+}
+
 interface AttemptRow {
   id: string;
   concept_id: string;
@@ -388,11 +395,7 @@ export function createTrainingRepository(db: Database.Database) {
       return mapConcept(getConceptStatement.get(conceptId) as ConceptRow);
     },
 
-    getTrainingView(conceptId: string): {
-      concept: Concept;
-      attempts: PracticeAttempt[];
-      openGaps: KnowledgeGap[];
-    } | null {
+    getTrainingView(conceptId: string): TrainingView | null {
       const conceptRow = getConceptStatement.get(conceptId) as
         | ConceptRow
         | undefined;
@@ -408,7 +411,7 @@ export function createTrainingRepository(db: Database.Database) {
       const gaps = db
         .prepare(
           `SELECT * FROM knowledge_gaps
-           WHERE concept_id = ? AND status = 'open'
+           WHERE concept_id = ?
            ORDER BY created_at ASC`,
         )
         .all(conceptId) as GapRow[];
@@ -416,7 +419,10 @@ export function createTrainingRepository(db: Database.Database) {
       return {
         concept: mapConcept(conceptRow),
         attempts: attempts.map(mapAttempt),
-        openGaps: gaps.map(mapGap),
+        openGaps: gaps.filter((gap) => gap.status === "open").map(mapGap),
+        resolvedGaps: gaps
+          .filter((gap) => gap.status === "resolved")
+          .map(mapGap),
       };
     },
   };
