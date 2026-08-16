@@ -1,69 +1,156 @@
-import Image from "next/image";
+import Link from "next/link";
+
+import { EmptyState } from "@/components/ui-states";
+import { getDatabase } from "@/server/db/client";
+import { createSessionRepository } from "@/server/repositories/session-repository";
+
+export const dynamic = "force-dynamic";
+
+const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
+  month: "short",
+  day: "numeric",
+});
 
 export default function Home() {
+  const sessions = createSessionRepository(getDatabase()).listRecent(6);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
+    <main id="main-content">
+      <section className="hero section-wrap" aria-labelledby="hero-title">
+        <div className="hero__copy">
+          <span className="eyebrow eyebrow--pulse">Learn by explaining · AI 正在倾听</span>
+          <h1 id="hero-title">
+            让模糊的理解，
+            <span>像水一样清楚。</span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="hero__lead">
+            把刚学过的知识讲给 AI 听。它不会抢着给答案，而会顺着你的解释追问，找到你真正没想清楚的地方。
+          </p>
+          <div className="hero__actions">
+            <Link className="button button--primary" href="/sessions/new">
+              开始一次学习 <span aria-hidden="true">→</span>
+            </Link>
+            <a className="text-link" href="#method">
+              看看它如何训练 <span aria-hidden="true">↘</span>
+            </a>
+          </div>
+          <div className="ripple-hint">
+            <span className="ripple-hint__icon" aria-hidden="true" />
+            移动、停留或点击鼠标，观察水面尾波与涟漪
+          </div>
+        </div>
+
+        <div className="hero-demo" aria-label="训练对话示例">
+          <div className="orbit orbit--outer" aria-hidden="true" />
+          <div className="orbit orbit--inner" aria-hidden="true" />
+          <span className="concept-chip concept-chip--coral">外部知识</span>
+          <span className="concept-chip concept-chip--mint">生成上下文</span>
+          <span className="concept-chip concept-chip--blue">模型边界</span>
+          <article className="listening-card glass-card">
+            <header>
+              <span className="listening-state">
+                <span className="sound-wave" aria-hidden="true">
+                  <i />
+                  <i />
+                  <i />
+                  <i />
+                </span>
+                AI 正在听
+              </span>
+              <span>问题 1 / 4</span>
+            </header>
+            <h2>为什么加入外部资料，能够改善模型的回答？</h2>
+            <p>先别看资料。请用你自己的话讲给我听。</p>
+            <div className="demo-input">
+              <span>从这里开始解释…</span>
+              <i aria-hidden="true">↑</i>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section className="method section-wrap" id="method" aria-labelledby="method-title">
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">不是问答工具，是理解训练</span>
+            <h2 id="method-title">讲一遍，追一层，再讲明白。</h2>
+          </div>
+          <p>
+            每轮只处理一个知识点、一个问题。状态由确定性规则推进，不让 AI 随意给你“已掌握”的错觉。
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="method-grid">
+          <article className="method-card method-card--sun">
+            <span>01</span>
+            <h3>放入学习资料</h3>
+            <p>粘贴文本或 Markdown，AI 只基于你的资料拆出学习地图。</p>
+          </article>
+          <article className="method-card method-card--water">
+            <span>02</span>
+            <h3>先用自己的话讲</h3>
+            <p>不翻资料开始解释。AI 识别已理解、遗漏和明确误解。</p>
+          </article>
+          <article className="method-card method-card--coral">
+            <span>03</span>
+            <h3>沿着漏洞再验证</h3>
+            <p>逐级提示后必须重新讲；通过验证追问，才会标记为已掌握。</p>
+          </article>
         </div>
-      </main>
-    </div>
+      </section>
+
+      <section className="recent section-wrap" id="recent" aria-labelledby="recent-title">
+        <div className="section-heading section-heading--compact">
+          <div>
+            <span className="eyebrow">你的学习水位</span>
+            <h2 id="recent-title">最近 Sessions</h2>
+          </div>
+          {sessions.length > 0 ? (
+            <Link className="text-link" href="/sessions/new">
+              新建学习 <span aria-hidden="true">＋</span>
+            </Link>
+          ) : null}
+        </div>
+
+        {sessions.length === 0 ? (
+          <EmptyState
+            eyebrow="还没有学习记录"
+            title="从一份你刚读完的资料开始"
+            description="准备 100 字以上的文本。你负责讲，ExplainBack 负责追问。"
+            actionLabel="创建第一个 Session"
+            actionHref="/sessions/new"
+          />
+        ) : (
+          <div className="session-grid">
+            {sessions.map((session) => (
+              <Link
+                className="session-card glass-card"
+                href={`/sessions/${session.id}`}
+                key={session.id}
+              >
+                <div className="session-card__meta">
+                  <span>{dateFormatter.format(new Date(session.updatedAt))}</span>
+                  <span className={`map-state map-state--${session.mapStatus}`}>
+                    {mapStateLabel(session.mapStatus)}
+                  </span>
+                </div>
+                <h3>{session.title}</h3>
+                <div className="session-card__progress">
+                  <span>
+                    {session.masteredCount} / {session.conceptCount} 已掌握
+                  </span>
+                  <span aria-hidden="true">→</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+    </main>
   );
+}
+
+function mapStateLabel(status: "processing" | "ready" | "failed") {
+  if (status === "processing") return "生成中";
+  if (status === "failed") return "可重试";
+  return "学习地图已就绪";
 }

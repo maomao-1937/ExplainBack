@@ -620,7 +620,7 @@ git commit -m "feat(接口): 添加核心学习 API"
 - 创建：`src/components/ui-states.tsx`
 - 创建：`tests/components/water-background.test.tsx`
 
-- [ ] **步骤 1：编写失败的动效无障碍测试**
+- [x] **步骤 1：编写失败的动效无障碍测试**
 
 验证：
 
@@ -630,13 +630,13 @@ expect(screen.getByTestId("water-background")).toHaveAttribute("aria-hidden", "t
 expect(screen.getByTestId("water-canvas")).toHaveStyle({ pointerEvents: "none" });
 ```
 
-- [ ] **步骤 2：运行测试并确认失败**
+- [x] **步骤 2：运行测试并确认失败**
 
 运行：`npx vitest run tests/components/water-background.test.tsx`
 
 预期：FAIL。
 
-- [ ] **步骤 3：实现 WaterBackground**
+- [x] **步骤 3：实现 WaterBackground**
 
 实现要求：
 
@@ -647,7 +647,7 @@ expect(screen.getByTestId("water-canvas")).toHaveStyle({ pointerEvents: "none" }
 - 组件卸载时取消 RAF、ResizeObserver 和事件监听。
 - Canvas 使用 `pointer-events: none`，事件绑定到传入的容器 Ref 或 Window。
 
-- [ ] **步骤 4：实现首页与设计 Token**
+- [x] **步骤 4：实现首页与设计 Token**
 
 首页包含 Hero、主 CTA、三步核心价值和最近 Sessions。全局 Token：
 
@@ -668,7 +668,7 @@ expect(screen.getByTestId("water-canvas")).toHaveStyle({ pointerEvents: "none" }
 
 预期：PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add src/app src/components tests/components/water-background.test.tsx
