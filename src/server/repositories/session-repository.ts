@@ -149,6 +149,20 @@ export function createSessionRepository(db: Database.Database) {
       }
     },
 
+    markMapProcessing(sessionId: string): void {
+      const result = db
+        .prepare(
+          `UPDATE study_sessions
+           SET map_status = 'processing', map_error = NULL, updated_at = ?
+           WHERE id = ?`,
+        )
+        .run(new Date().toISOString(), sessionId);
+
+      if (result.changes === 0) {
+        throw new Error("Session 不存在");
+      }
+    },
+
     replaceConceptsAndMarkReady(
       sessionId: string,
       drafts: ConceptDraft[],

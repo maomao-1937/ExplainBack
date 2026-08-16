@@ -22,3 +22,11 @@ export type GapStatus = "open" | "resolved";
 
 export type SupportLevel = 0 | 1 | 2 | 3;
 
+export type AnalyticsEventName =
+  | "session_created"
+  | "concept_started"
+  | "explanation_submitted"
+  | "followup_answered"
+  | "hint_requested"
+  | "concept_mastered"
+  | "concept_abandoned";

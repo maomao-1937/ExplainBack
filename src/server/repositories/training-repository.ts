@@ -210,6 +210,25 @@ export function createTrainingRepository(db: Database.Database) {
       return row ? mapAttempt(row) : null;
     },
 
+    getAttemptById(attemptId: string): PracticeAttempt | null {
+      const row = getAttemptStatement.get(attemptId) as AttemptRow | undefined;
+      return row ? mapAttempt(row) : null;
+    },
+
+    retryPendingAttempt(attemptId: string): PracticeAttempt {
+      const result = db
+        .prepare(
+          `UPDATE practice_attempts
+           SET processing_status = 'pending', error_message = NULL, updated_at = ?
+           WHERE id = ? AND processing_status = 'failed'`,
+        )
+        .run(new Date().toISOString(), attemptId);
+      if (result.changes === 0) {
+        throw new Error("只有失败的 Attempt 可以重试");
+      }
+      return mapAttempt(getAttemptStatement.get(attemptId) as AttemptRow);
+    },
+
     completeAttemptAndTransition(input: CompleteAttemptInput): PracticeAttempt {
       const complete = db.transaction(() => {
         const attempt = getAttemptStatement.get(input.attemptId) as
@@ -402,4 +421,3 @@ export function createTrainingRepository(db: Database.Database) {
     },
   };
 }
-

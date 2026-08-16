@@ -482,7 +482,7 @@ git commit -m "feat(AI): 添加资料约束与结构化判断"
 - 创建：`tests/integration/session-service.test.ts`
 - 创建：`tests/integration/training-service.test.ts`
 
-- [ ] **步骤 1：编写失败的 Service 测试**
+- [x] **步骤 1：编写失败的 Service 测试**
 
 测试覆盖：
 
@@ -494,13 +494,13 @@ git commit -m "feat(AI): 添加资料约束与结构化判断"
 - 经过 Level 3 后强制 Retest。
 - Retest 正确后 Gap 被标记为 Resolved。
 
-- [ ] **步骤 2：运行测试并确认失败**
+- [x] **步骤 2：运行测试并确认失败**
 
 运行：`npx vitest run tests/integration/session-service.test.ts tests/integration/training-service.test.ts`
 
 预期：FAIL，提示 Service 不存在。
 
-- [ ] **步骤 3：实现 Session Service**
+- [x] **步骤 3：实现 Session Service**
 
 导出：
 
@@ -518,7 +518,7 @@ export async function retryLearningMap(
 
 写入 Session 后再调用 Tutor；资料片段校验失败自动重试 1 次；两次失败后标记 `failed`。
 
-- [ ] **步骤 4：实现 Training Service**
+- [x] **步骤 4：实现 Training Service**
 
 导出：
 
@@ -539,7 +539,7 @@ const initialQuestion = `先别看资料。请用你自己的话解释：${conce
 
 预期：PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add src/server/services tests/integration
